@@ -101,11 +101,9 @@ def main(targetdate: int):
         return
 
     for file in [f for f in files if pattern_json.match(f)]:
-        code = int(file.replace(".json", ""))
-        if code in [101, 151, 154]:
-            continue
-        if code in thresholds:
-            print(f"Not found symbol({code}) in symbols.csv .")
+        code = file.replace(".json", "")
+        if code in ["101", "151", "154"] or code not in thresholds:
+            print(f"Not found \"{code}\" in symbols csv.")
             continue
         open_file(targetdate, file)
 
