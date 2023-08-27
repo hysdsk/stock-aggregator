@@ -17,6 +17,7 @@ config = configparser["DEFAULT"]
 parser = ArgumentParser()
 parser.add_argument("--day", type=int, default=0, help="")
 parser.add_argument("--close", type=int, default=15, choices=[10, 11, 12, 13, 14, 15], help="")
+parser.add_argument("--mode", type=str, default="console", choices=["console", "csv"], help="")
 args = parser.parse_args()
 
 am8 = datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
@@ -25,6 +26,7 @@ close_time = datetime.now().replace(hour=args.close, minute=0, second=0, microse
 df = pd.read_csv(config["target_filename"], dtype={"code": str}, skipinitialspace=True).rename(columns=lambda x: x.strip())
 thresholds = { target["code"]: target["th_value"] * 10000 for target in df.to_dict("records") }
 
+printer = Printer(config["output_csvname"]) if args.mode == "csv" else Printer()
 
 # Sell or Buy
 def sellorbuy(crnt: Message, prev: Message):
@@ -79,7 +81,10 @@ def check_data(lines: list):
     if output["buy_count"] > 0:
         output["out_price"] = messages[-1].currentPrice
         output["out_time"] = messages[-1].currentPriceTime
-        Printer().out_print(messages[-1], output)
+        if args.mode == "csv":
+            printer.out_csv(messages[-1], output)
+        else:
+            printer.out_console(messages[-1], output)
 
 # each symbol process
 def open_file(targetdate: int, file: str):
@@ -114,8 +119,11 @@ if __name__ == "__main__":
     print("7. 初回売大約定時間（終了時含む）")
     print("8. 初回売大約定価格（終了時含む）")
     print("9. 価格騰落率")
-    if args.day > 0:
-        main(args.day)
-    else:
-        for targetdate in os.listdir(config["tickdata_directory"]):
-            main(targetdate)
+    try:
+        if args.day > 0:
+            main(args.day)
+        else:
+            for targetdate in os.listdir(config["tickdata_directory"]):
+                main(targetdate)
+    finally:
+        printer.close_writer()
