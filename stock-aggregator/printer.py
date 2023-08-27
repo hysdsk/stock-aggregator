@@ -48,7 +48,7 @@ class Printer(Console):
             message.receivedTime.strftime("%Y/%m/%d"),
             self.get_jp_week(message.receivedTime),
             message.symbol,
-            Formater(message.symbolName).sname().value,
+            message.symbolName,
             Formater(output["buy_time"]).time().value,
             Formater(output["buy_price"]).price().value,
             output["buy_count"],
