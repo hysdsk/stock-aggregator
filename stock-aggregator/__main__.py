@@ -48,6 +48,7 @@ def check_data(lines: list):
         "buy_price": None,
         "buy_time": None,
         "buy_count": 0,
+        "buy_tradingvalue": None,
         "out_price": None,
         "out_time": None,
     }
@@ -73,6 +74,7 @@ def check_data(lines: list):
                 if output["buy_price"] is None:
                     output["buy_price"] = crnt.currentPrice
                     output["buy_time"] = crnt.currentPriceTime
+                    output["buy_tradingvalue"] = crnt.tradingValue
                 output["buy_count"] += 1
             elif sob < 0:
                 if output["buy_count"] > 0:
@@ -108,15 +110,7 @@ def main(targetdate: int):
         open_file(targetdate, file)
 
 if __name__ == "__main__":
-    print("1. 日付")
-    print("2. 銘柄コード")
-    print("3. 銘柄名")
-    print("4. 初回買大約定時間")
-    print("5. 初回買大約定価格")
-    print("6. 買大約定数")
-    print("7. 初回売大約定時間（終了時含む）")
-    print("8. 初回売大約定価格（終了時含む）")
-    print("9. 価格騰落率")
+    print("Now aggregating ...")
     try:
         if args.day > 0:
             main(args.day)
