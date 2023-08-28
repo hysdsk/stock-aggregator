@@ -51,6 +51,8 @@ def check_data(lines: list):
         "buy_tradingvalue": None,
         "out_price": None,
         "out_time": None,
+        "high_price": None,
+        "low_price": None,
     }
     messages: list[Message] = []
     for line in lines:
@@ -67,6 +69,12 @@ def check_data(lines: list):
         if prev.currentPrice is None:
             continue
 
+        if output["buy_price"] is not None:
+            if output["high_price"] < crnt.currentPrice:
+                output["high_price"] = crnt.currentPrice
+            if output["low_price"] > crnt.currentPrice:
+                output["low_price"] = crnt.currentPrice
+
         value = crnt.tradingValue - prev.tradingValue
         if value > thresholds[crnt.symbol]:
             sob = sellorbuy(crnt, prev)
@@ -75,6 +83,8 @@ def check_data(lines: list):
                     output["buy_price"] = crnt.currentPrice
                     output["buy_time"] = crnt.currentPriceTime
                     output["buy_tradingvalue"] = crnt.tradingValue
+                    output["high_price"] = crnt.currentPrice
+                    output["low_price"] = crnt.currentPrice
                 output["buy_count"] += 1
             elif sob < 0:
                 if output["buy_count"] > 0:
