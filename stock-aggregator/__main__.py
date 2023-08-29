@@ -15,7 +15,7 @@ configparser.read("config.ini")
 config = configparser["DEFAULT"]
 
 parser = ArgumentParser()
-parser.add_argument("--day", type=int, default=0, help="")
+parser.add_argument("--day", type=str, default=None, help="")
 parser.add_argument("--close", type=int, default=15, choices=[10, 11, 12, 13, 14, 15], help="")
 parser.add_argument("--mode", type=str, default="console", choices=["console", "csv"], help="")
 args = parser.parse_args()
@@ -105,7 +105,7 @@ def open_file(targetdate: int, file: str):
         check_data(f.readlines())
 
 # main process
-def main(targetdate: int):
+def main(targetdate: str):
     pattern_json = re.compile(r"^[0-9]{4}\.json$")
     files = os.listdir(f"{config['tickdata_directory']}/{targetdate}")
     if "incomplete" in files:
@@ -122,10 +122,15 @@ def main(targetdate: int):
 if __name__ == "__main__":
     print("Now aggregating ...")
     try:
-        if args.day > 0:
-            main(args.day)
-        else:
+        if args.day is None:
             for targetdate in os.listdir(config["tickdata_directory"]):
                 main(targetdate)
+        elif re.compile(r"^[0-9]{6}$").match(args.day):
+            for targetdate in os.listdir(config["tickdata_directory"]):
+                if targetdate.startswith(args.day): main(targetdate)
+        elif re.compile(r"^[0-9]{8}$").match(args.day):
+            main(args.day)
+        else:
+            print(f"Invalid day: {args.day}")
     finally:
         printer.close_writer()
