@@ -15,9 +15,11 @@ configparser.read("config.ini")
 config = configparser["DEFAULT"]
 
 parser = ArgumentParser()
-parser.add_argument("--day", type=int, default=0, help="")
+parser.add_argument("--day", type=str, default=None, help="")
 parser.add_argument("--close", type=int, default=15, choices=[10, 11, 12, 13, 14, 15], help="")
 parser.add_argument("--mode", type=str, default="console", choices=["console", "csv"], help="")
+parser.add_argument("--buy", type=int, default=1, help="")
+parser.add_argument("--sell", type=int, default=1, help="")
 args = parser.parse_args()
 
 am8 = datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
@@ -49,6 +51,7 @@ def check_data(lines: list):
         "buy_time": None,
         "buy_count": 0,
         "buy_tradingvalue": None,
+        "sell_count": 0,
         "out_price": None,
         "out_time": None,
         "high_price": None,
@@ -79,18 +82,19 @@ def check_data(lines: list):
         if value > thresholds[crnt.symbol]:
             sob = sellorbuy(crnt, prev)
             if sob > 0:
-                if output["buy_price"] is None:
+                output["buy_count"] += 1
+                if output["buy_count"] >= args.buy and output["buy_price"] is None:
                     output["buy_price"] = crnt.currentPrice
                     output["buy_time"] = crnt.currentPriceTime
                     output["buy_tradingvalue"] = crnt.tradingValue
                     output["high_price"] = crnt.currentPrice
                     output["low_price"] = crnt.currentPrice
-                output["buy_count"] += 1
             elif sob < 0:
-                if output["buy_count"] > 0:
+                output["sell_count"] += 1
+                if output["sell_count"] >= args.sell:
                    break
 
-    if output["buy_count"] > 0:
+    if output["buy_count"] >= args.buy:
         output["out_price"] = messages[-1].currentPrice
         output["out_time"] = messages[-1].currentPriceTime
         if args.mode == "csv":
@@ -105,7 +109,7 @@ def open_file(targetdate: int, file: str):
         check_data(f.readlines())
 
 # main process
-def main(targetdate: int):
+def main(targetdate: str):
     pattern_json = re.compile(r"^[0-9]{4}\.json$")
     files = os.listdir(f"{config['tickdata_directory']}/{targetdate}")
     if "incomplete" in files:
@@ -122,10 +126,15 @@ def main(targetdate: int):
 if __name__ == "__main__":
     print("Now aggregating ...")
     try:
-        if args.day > 0:
-            main(args.day)
-        else:
+        if args.day is None:
             for targetdate in os.listdir(config["tickdata_directory"]):
                 main(targetdate)
+        elif re.compile(r"^[0-9]{6}$").match(args.day):
+            for targetdate in os.listdir(config["tickdata_directory"]):
+                if targetdate.startswith(args.day): main(targetdate)
+        elif re.compile(r"^[0-9]{8}$").match(args.day):
+            main(args.day)
+        else:
+            print(f"Invalid day: {args.day}")
     finally:
         printer.close_writer()
