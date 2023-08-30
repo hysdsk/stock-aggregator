@@ -18,6 +18,8 @@ parser = ArgumentParser()
 parser.add_argument("--day", type=str, default=None, help="")
 parser.add_argument("--close", type=int, default=15, choices=[10, 11, 12, 13, 14, 15], help="")
 parser.add_argument("--mode", type=str, default="console", choices=["console", "csv"], help="")
+parser.add_argument("--buy", type=int, default=1, help="")
+parser.add_argument("--sell", type=int, default=1, help="")
 args = parser.parse_args()
 
 am8 = datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
@@ -49,6 +51,7 @@ def check_data(lines: list):
         "buy_time": None,
         "buy_count": 0,
         "buy_tradingvalue": None,
+        "sell_count": 0,
         "out_price": None,
         "out_time": None,
         "high_price": None,
@@ -79,18 +82,19 @@ def check_data(lines: list):
         if value > thresholds[crnt.symbol]:
             sob = sellorbuy(crnt, prev)
             if sob > 0:
-                if output["buy_price"] is None:
+                output["buy_count"] += 1
+                if output["buy_count"] >= args.buy and output["buy_price"] is None:
                     output["buy_price"] = crnt.currentPrice
                     output["buy_time"] = crnt.currentPriceTime
                     output["buy_tradingvalue"] = crnt.tradingValue
                     output["high_price"] = crnt.currentPrice
                     output["low_price"] = crnt.currentPrice
-                output["buy_count"] += 1
             elif sob < 0:
-                if output["buy_count"] > 0:
+                output["sell_count"] += 1
+                if output["sell_count"] >= args.sell:
                    break
 
-    if output["buy_count"] > 0:
+    if output["buy_count"] >= args.buy:
         output["out_price"] = messages[-1].currentPrice
         output["out_time"] = messages[-1].currentPriceTime
         if args.mode == "csv":
