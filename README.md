@@ -28,5 +28,6 @@ python -m stock-aggregator --output console --day <YYYYMM[DD]> --close <10-15>
 | --output | console | 起動モードを指定する。<br> - console: コンソール出力する。 <br> - csv: CSV出力する。出力先の設定が必要となる。 |
 | --day | None | 集計対象の日付を「YYYYMMDD」形式、または年月を「YYYYMM」形式で指定する。<br>全データを対象とする場合は指定しない。 |
 | --close | 15 | 集計の終了時間を指定する。 |
+| --item | short | 出力する項目量を指定する。<br> - short: 簡潔<br> - full: 全て |
 | --buy | 1 | 集計の開始価格の買大約定数を指定する。 |
 | --sell | 1 | 集計の終了価格の売大約定数を指定する。 |

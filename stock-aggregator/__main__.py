@@ -18,6 +18,7 @@ parser = ArgumentParser()
 parser.add_argument("--day", type=str, default=None, help="")
 parser.add_argument("--close", type=int, default=15, choices=[10, 11, 12, 13, 14, 15], help="")
 parser.add_argument("--output", type=str, default="console", choices=["console", "csv"], help="")
+parser.add_argument("--item", type=str, default="short", choices=["short", "full"], help="")
 parser.add_argument("--buy", type=int, default=1, help="")
 parser.add_argument("--sell", type=int, default=1, help="")
 args = parser.parse_args()
@@ -28,7 +29,7 @@ close_time = datetime.now().replace(hour=args.close, minute=0, second=0, microse
 df = pd.read_csv(config["target_filename"], dtype={"code": str}, skipinitialspace=True).rename(columns=lambda x: x.strip())
 thresholds = { target["code"]: target["th_value"] * 10000 for target in df.to_dict("records") }
 
-printer = Printer(config["output_csvname"]) if args.output == "csv" else Printer()
+printer = Printer(args.item, config["output_csvname"]) if args.output == "csv" else Printer(args.item)
 
 # Sell or Buy
 def sellorbuy(crnt: Message, prev: Message):
