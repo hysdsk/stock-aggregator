@@ -8,7 +8,7 @@ import pandas as pd
 from kabustation.message import Message
 from .output import Output
 from .printer import Printer
-from .processor import ContractProcessor
+from .processor import Processor, ContractProcessor, OrderProcessor
 
 
 # Global
@@ -19,6 +19,7 @@ config = configparser["DEFAULT"]
 parser = ArgumentParser()
 parser.add_argument("--day", type=str, default=None, help="")
 parser.add_argument("--close", type=int, default=15, choices=[10, 11, 12, 13, 14, 15], help="")
+parser.add_argument("--mode", type=str, default="contract", choices=["contract", "order"], help="")
 parser.add_argument("--output", type=str, default="console", choices=["console", "csv"], help="")
 parser.add_argument("--item", type=str, default="short", choices=["short", "full"], help="")
 parser.add_argument("--buy", type=int, default=1, help="")
@@ -36,7 +37,8 @@ printer = Printer(item=args.item, output=config["output_csvname"]) if args.outpu
 
 # each data
 def check_data(lines: list):
-    cp = ContractProcessor(thresholds, args.buy, args.sell)
+    proccesor: Processor = OrderProcessor(thresholds, args.buy, args.sell) \
+        if args.mode == "order" else ContractProcessor(thresholds, args.buy, args.sell)
     output = Output()
     messages: list[Message] = []
     for line in lines:
@@ -47,10 +49,10 @@ def check_data(lines: list):
             break
 
         messages.append(Message(json.loads(line)))
-        if cp.run(messages, output) == 1:
+        if proccesor.run(messages, output) == 1:
             break
 
-    if output.buy_count >= args.buy:
+    if output.buy_count >= args.buy and output.buy_price:
         output.out_price = messages[-1].currentPrice
         output.out_time = messages[-1].currentPriceTime
         if args.output == "csv":
