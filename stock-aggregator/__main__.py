@@ -6,7 +6,9 @@ from argparse import ArgumentParser
 from datetime import datetime
 import pandas as pd
 from kabustation.message import Message
+from .output import Output
 from .printer import Printer
+from .processor import Processor, ContractProcessor, OrderProcessor
 
 
 # Global
@@ -17,7 +19,9 @@ config = configparser["DEFAULT"]
 parser = ArgumentParser()
 parser.add_argument("--day", type=str, default=None, help="")
 parser.add_argument("--close", type=int, default=15, choices=[10, 11, 12, 13, 14, 15], help="")
-parser.add_argument("--mode", type=str, default="console", choices=["console", "csv"], help="")
+parser.add_argument("--mode", type=str, default="contract", choices=["contract", "order"], help="")
+parser.add_argument("--output", type=str, default="console", choices=["console", "csv"], help="")
+parser.add_argument("--item", type=str, default="short", choices=["short", "full"], help="")
 parser.add_argument("--buy", type=int, default=1, help="")
 parser.add_argument("--sell", type=int, default=1, help="")
 args = parser.parse_args()
@@ -28,35 +32,14 @@ close_time = datetime.now().replace(hour=args.close, minute=0, second=0, microse
 df = pd.read_csv(config["target_filename"], dtype={"code": str}, skipinitialspace=True).rename(columns=lambda x: x.strip())
 thresholds = { target["code"]: target["th_value"] * 10000 for target in df.to_dict("records") }
 
-printer = Printer(config["output_csvname"]) if args.mode == "csv" else Printer()
+printer = Printer(item=args.item, output=config["output_csvname"]) if args.output == "csv" else Printer(item=args.item)
 
-# Sell or Buy
-def sellorbuy(crnt: Message, prev: Message):
-    prevprice = crnt.previousClose if prev.is_preparing() else prev.currentPrice
-    if prevprice:
-        if crnt.currentPrice < prevprice:
-            return -1
-        if crnt.currentPrice > prevprice:
-            return 1
-        if prev.askPrice and prevprice <= prev.askPrice:
-            return -1
-        if prev.bidPrice and prevprice >= prev.bidPrice:
-            return 1
-    return 0
 
 # each data
 def check_data(lines: list):
-    output = {
-        "buy_price": None,
-        "buy_time": None,
-        "buy_count": 0,
-        "buy_tradingvalue": None,
-        "sell_count": 0,
-        "out_price": None,
-        "out_time": None,
-        "high_price": None,
-        "low_price": None,
-    }
+    proccesor: Processor = OrderProcessor(thresholds, args.buy, args.sell) \
+        if args.mode == "order" else ContractProcessor(thresholds, args.buy, args.sell)
+    output = Output()
     messages: list[Message] = []
     for line in lines:
         crnt = Message(json.loads(line))
@@ -66,38 +49,13 @@ def check_data(lines: list):
             break
 
         messages.append(Message(json.loads(line)))
-        if len(messages) < 2:
-            continue
-        prev = messages[-2]
-        if prev.currentPrice is None:
-            continue
+        if proccesor.run(messages, output) == 1:
+            break
 
-        if output["buy_price"] is not None:
-            if output["high_price"] < crnt.currentPrice:
-                output["high_price"] = crnt.currentPrice
-            if output["low_price"] > crnt.currentPrice:
-                output["low_price"] = crnt.currentPrice
-
-        value = crnt.tradingValue - prev.tradingValue
-        if value > thresholds[crnt.symbol]:
-            sob = sellorbuy(crnt, prev)
-            if sob > 0:
-                output["buy_count"] += 1
-                if output["buy_count"] >= args.buy and output["buy_price"] is None:
-                    output["buy_price"] = crnt.currentPrice
-                    output["buy_time"] = crnt.currentPriceTime
-                    output["buy_tradingvalue"] = crnt.tradingValue
-                    output["high_price"] = crnt.currentPrice
-                    output["low_price"] = crnt.currentPrice
-            elif sob < 0:
-                output["sell_count"] += 1
-                if output["sell_count"] >= args.sell:
-                   break
-
-    if output["buy_count"] >= args.buy:
-        output["out_price"] = messages[-1].currentPrice
-        output["out_time"] = messages[-1].currentPriceTime
-        if args.mode == "csv":
+    if output.buy_count >= args.buy and output.buy_price:
+        output.out_price = messages[-1].currentPrice
+        output.out_time = messages[-1].currentPriceTime
+        if args.output == "csv":
             printer.out_csv(messages[-1], output)
         else:
             printer.out_console(messages[-1], output)
