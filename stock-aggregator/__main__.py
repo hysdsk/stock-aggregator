@@ -32,7 +32,7 @@ close_time = datetime.now().replace(hour=args.close, minute=0, second=0, microse
 df = pd.read_csv(config["target_filename"], dtype={"code": str}, skipinitialspace=True).rename(columns=lambda x: x.strip())
 thresholds = { target["code"]: target["th_value"] * 10000 for target in df.to_dict("records") }
 
-printer = Printer(item=args.item, output=config["output_csvname"]) if args.output == "csv" else Printer(item=args.item)
+printer = Printer(item=args.item, distfile=config["output_csvname"]) if args.output == "csv" else Printer(item=args.item)
 
 
 # each data
