@@ -11,7 +11,8 @@ class Printer(Console):
                  distfile=None):
         self.item = item
         if distfile:
-            os.remove(distfile)
+            if os.path.exists(distfile):
+                os.remove(distfile)
             self.writer = open(distfile, mode="a", encoding="utf-8")
             self.writer.write("日付,曜日,銘柄コード,銘柄名,初回買大約定時間,初回買大約定価格,買大約定数,初回売大約定時間（終了時含む）,初回売大約定価格（終了時含む）,売大約定数,価格騰落率")
             if self.item == "full":
