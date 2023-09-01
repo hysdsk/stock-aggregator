@@ -15,7 +15,6 @@ class Printer(Console):
             self.writer = open(distfile, mode="a", encoding="utf-8")
             self.writer.write("日付,曜日,銘柄コード,銘柄名,初回買大約定時間,初回買大約定価格,買大約定数,初回売大約定時間（終了時含む）,初回売大約定価格（終了時含む）,売大約定数,価格騰落率")
             if self.item == "full":
-                print("test")
                 self.writer.write(",売買代金,高値,安値")
             self.writer.write("\n")
         else:
