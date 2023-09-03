@@ -59,9 +59,9 @@ def check_data(lines: list):
         output.out_price = messages[-1].currentPrice
         output.out_time = messages[-1].currentPriceTime
         if args.output == "csv":
-            printer.out_csv(messages[-1], output)
+            printer.out_csv(messages[-1], output, thresholds[crnt.symbol])
         else:
-            printer.out_console(messages[-1], output)
+            printer.out_console(messages[-1], output, thresholds[crnt.symbol])
 
 # each symbol process
 def open_file(targetdate: int, file: str):
