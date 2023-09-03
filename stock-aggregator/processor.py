@@ -101,4 +101,8 @@ class OrderProcessor(Processor):
             value = (crnt.marketOrderBuyQty - prev.marketOrderBuyQty) * crnt.calcPrice
             if value > self.thresholds[crnt.symbol]:
                 output.buy_count += 1
+            elif value * -1 > self.thresholds[crnt.symbol] and output.buy_count > 0:
+                if crnt.askSign == prev.askSign and crnt.bidSign == prev.bidSign:
+                    output.buy_count -= 1
+                    output.buy_time = None
         return 0
