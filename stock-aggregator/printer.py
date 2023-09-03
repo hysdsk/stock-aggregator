@@ -16,7 +16,7 @@ class Printer(Console):
             self.writer = open(distfile, mode="a", encoding="utf-8")
             self.writer.write("日付,曜日,銘柄コード,銘柄名,初回買大約定時間,初回買大約定価格,買大約定数,初回売大約定時間（終了時含む）,初回売大約定価格（終了時含む）,売大約定数,価格騰落率")
             if self.item == "full":
-                self.writer.write(",売買代金,高値,安値")
+                self.writer.write(",売買代金,高値,安値,寄り時間,ギャップ率")
             self.writer.write("\n")
         else:
             print(" 1. 日付")
@@ -33,6 +33,8 @@ class Printer(Console):
                 print("11. 売買代金")
                 print("12. 高値")
                 print("13. 安値")
+                print("14. 寄り時間")
+                print("15. ギャップ率")
 
     def print(self, content: str):
         super().print(content)
@@ -65,11 +67,14 @@ class Printer(Console):
             super().formatrate(rate))
 
         if self.item == "full":
-            content = "{} {} {} {}".format(
+            openingrate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
+            content = "{} {} {} {} {} {}".format(
                 content,
                 Formater(tradingvalue).volume().value,
                 Formater(output.high_price).price().value,
-                Formater(output.low_price).price().value)
+                Formater(output.low_price).price().value,
+                Formater(message.openingPriceTime).time().value,
+                super().formatrate(openingrate))
 
         self.print(content)
 
@@ -83,19 +88,22 @@ class Printer(Console):
             message.symbol,
             message.symbolName,
             Formater(output.buy_time).time().value,
-            Formater(output.buy_price).price().value,
+            output.buy_price,
             output.buy_count,
             Formater(output.out_time).time().value,
-            Formater(output.out_price).price().value,
+            output.out_price,
             output.sell_count,
             rate)
 
         if self.item == "full":
-            content = "{},{},{},{}".format(
+            openingrate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
+            content = "{},{},{},{},{},{}".format(
                 content,
                 tradingvalue,
-                Formater(output.high_price).price().value,
-                Formater(output.low_price).price().value)
+                output.high_price,
+                output.low_price,
+                Formater(message.openingPriceTime).time().value,
+                openingrate)
 
         self.writer.write(f"{content}\n")
 

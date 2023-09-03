@@ -29,6 +29,8 @@ args = parser.parse_args()
 
 am8 = datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
 close_time = datetime.now().replace(hour=args.close, minute=0, second=0, microsecond=0)
+if args.close == 15:
+    close_time = datetime.now().replace(hour=14, minute=59, second=55, microsecond=0)
 
 df = pd.read_csv(config["target_filename"], dtype={"code": str}, skipinitialspace=True).rename(columns=lambda x: x.strip())
 thresholds = { target["code"]: target["th_value"] * 10000 for target in df.to_dict("records") }
