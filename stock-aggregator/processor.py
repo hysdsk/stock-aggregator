@@ -60,11 +60,11 @@ class ContractProcessor(Processor):
         return 0
 
 class OrderProcessor(Processor):
-    def __init__(self, thresholds: object, buy: int, sell: int) -> None:
+    def __init__(self, thresholds: object, buy: int, sell: int, offset_minute: int) -> None:
         super().__init__(thresholds, buy, sell)
-        self.time0855 = datetime.now().replace(hour=8, minute=55, second=0, microsecond=0)
+        self.time0855 = datetime.now().replace(hour=8, minute=60-offset_minute, second=0, microsecond=0)
         self.time1130 = datetime.now().replace(hour=11, minute=30, second=0, microsecond=0)
-        self.time1225 = datetime.now().replace(hour=12, minute=25, second=0, microsecond=0)
+        self.time1225 = datetime.now().replace(hour=12, minute=30-offset_minute, second=0, microsecond=0)
     def is_skip(self, currenttime: datetime):
         return currenttime.time() < self.time0855.time() or \
             (currenttime.time() >= self.time1130.time() and currenttime.time() < self.time1225.time())

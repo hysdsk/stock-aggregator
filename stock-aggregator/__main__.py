@@ -18,12 +18,13 @@ config = configparser["DEFAULT"]
 
 parser = ArgumentParser()
 parser.add_argument("--day", type=str, default=None, help="")
-parser.add_argument("--close", type=int, default=15, choices=[10, 11, 12, 13, 14, 15], help="")
+parser.add_argument("--close", type=int, default=15, choices=range(10, 16), help="")
 parser.add_argument("--mode", type=str, default="contract", choices=["contract", "order"], help="")
 parser.add_argument("--output", type=str, default="console", choices=["console", "csv"], help="")
-parser.add_argument("--item", type=str, default="short", choices=["short", "full"], help="")
 parser.add_argument("--buy", type=int, default=1, help="")
 parser.add_argument("--sell", type=int, default=1, help="")
+parser.add_argument("--offset-minute", type=int, default=5, choices=range(1, 31), help="")
+parser.add_argument("--item", type=str, default="short", choices=["short", "full"], help="")
 args = parser.parse_args()
 
 am8 = datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
@@ -37,7 +38,7 @@ printer = Printer(item=args.item, distfile=config["output_csvname"]) if args.out
 
 # each data
 def check_data(lines: list):
-    proccesor: Processor = OrderProcessor(thresholds, args.buy, args.sell) \
+    proccesor: Processor = OrderProcessor(thresholds, args.buy, args.sell, args.offset_minute) \
         if args.mode == "order" else ContractProcessor(thresholds, args.buy, args.sell)
     output = Output()
     messages: list[Message] = []
