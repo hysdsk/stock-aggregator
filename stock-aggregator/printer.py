@@ -67,7 +67,9 @@ class Printer(Console):
             super().formatrate(rate))
 
         if self.item == "full":
-            openingrate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
+            openingrate = 0
+            if message.previousClose is not None:
+                openingrate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
             content = "{} {} {} {} {} {}".format(
                 content,
                 Formater(tradingvalue).volume().value,
@@ -96,7 +98,9 @@ class Printer(Console):
             rate)
 
         if self.item == "full":
-            openingrate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
+            openingrate = 0
+            if message.previousClose is not None:
+                openingrate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
             content = "{},{},{},{},{},{}".format(
                 content,
                 tradingvalue,
