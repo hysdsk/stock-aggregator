@@ -73,8 +73,10 @@ class Printer(Console):
             opening_closing_rate = 0
             if message.previousClose is not None:
                 opening_closing_rate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
+            buy_vwap_rate = 0
+            if output.buy_vwap is not None:
+                buy_vwap_rate = round((output.buy_price / output.buy_vwap * 100) - 100, 2)
             buy_opening_rate = round((output.buy_price / message.openingPrice * 100) - 100, 2)
-            buy_vwap_rate = round((output.buy_price / output.buy_vwap * 100) - 100, 2)
             low_buy_rate = round((output.low_price / output.buy_price * 100) - 100, 2)
             high_buy_rate = round((output.high_price / output.buy_price * 100) - 100, 2)
             tradingvalue = message.tradingValue - output.buy_tradingvalue
@@ -115,12 +117,14 @@ class Printer(Console):
     def out_csv(self, message: Message, output: Output, threshold: int):
         close_buy_rate = round((output.out_price / output.buy_price * 100) - 100, 2)
         buy_opening_rate = round((output.buy_price / message.openingPrice * 100) - 100, 2)
-        buy_vwap_rate = round((output.buy_price / output.buy_vwap * 100) - 100, 2)
         low_buy_rate = round((output.low_price / output.buy_price * 100) - 100, 2)
         high_buy_rate = round((output.high_price / output.buy_price * 100) - 100, 2)
         opening_closing_rate = 0
         if message.previousClose is not None:
             opening_closing_rate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
+        buy_vwap_rate = 0
+        if output.buy_vwap is not None:
+            buy_vwap_rate = round((output.buy_price / output.buy_vwap * 100) - 100, 2)
         tradingvalue = message.tradingValue - output.buy_tradingvalue
 
         self.writer.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
@@ -136,7 +140,7 @@ class Printer(Console):
             Formater(output.buy_time).time().value,
             output.buy_price,
             buy_opening_rate,
-            buy_vwap_rate,
+            0 if buy_vwap_rate is None else buy_vwap_rate,
             Formater(output.low_price_time).time().value,
             output.low_price,
             low_buy_rate,

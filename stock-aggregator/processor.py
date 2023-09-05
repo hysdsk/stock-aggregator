@@ -87,13 +87,18 @@ class OrderProcessor(Processor):
             if output.buy_price is None and crnt.is_opening():
                 output.buy_price = crnt.currentPrice
                 output.high_price = crnt.currentPrice
+                output.high_price_time = crnt.receivedTime
                 output.low_price = crnt.currentPrice
+                output.low_price_time = crnt.receivedTime
+                output.buy_vwap = crnt.vwap
                 output.buy_tradingvalue = crnt.tradingValue
             if output.buy_price is not None:
                 if output.high_price < crnt.currentPrice:
                     output.high_price = crnt.currentPrice
+                    output.high_price_time = crnt.receivedTime
                 if output.low_price > crnt.currentPrice:
                     output.low_price = crnt.currentPrice
+                    output.low_price_time = crnt.receivedTime
 
         if crnt.is_opening() and prev.is_opening():
             value = crnt.tradingValue - prev.tradingValue
