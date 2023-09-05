@@ -35,7 +35,7 @@ if args.close == 15:
 df = pd.read_csv(config["target_filename"], dtype={"code": str}, skipinitialspace=True).rename(columns=lambda x: x.strip())
 thresholds = { target["code"]: target["th_value"] * 10000 for target in df.to_dict("records") }
 
-printer = Printer(item=args.item, distfile=config["output_csvname"]) if args.output == "csv" else Printer(item=args.item)
+printer = Printer(item_len=args.item, distfile=config["output_csvname"]) if args.output == "csv" else Printer(item_len=args.item)
 
 
 # each data
@@ -59,9 +59,9 @@ def check_data(lines: list):
         output.out_price = messages[-1].currentPrice
         output.out_time = messages[-1].currentPriceTime
         if args.output == "csv":
-            printer.out_csv(messages[-1], output)
+            printer.out_csv(messages[-1], output, thresholds[crnt.symbol])
         else:
-            printer.out_console(messages[-1], output)
+            printer.out_console(messages[-1], output, thresholds[crnt.symbol])
 
 # each symbol process
 def open_file(targetdate: int, file: str):

@@ -39,8 +39,10 @@ class ContractProcessor(Processor):
         if output.buy_price is not None:
             if output.high_price < crnt.currentPrice:
                 output.high_price = crnt.currentPrice
+                output.high_price_time = crnt.receivedTime
             if output.low_price > crnt.currentPrice:
                 output.low_price = crnt.currentPrice
+                output.low_price_time = crnt.receivedTime
 
         value = crnt.tradingValue - prev.tradingValue
         if value > self.thresholds[crnt.symbol]:
@@ -50,9 +52,12 @@ class ContractProcessor(Processor):
                 if output.buy_count >= self.buy and output.buy_price is None:
                     output.buy_price = crnt.currentPrice
                     output.buy_time = crnt.currentPriceTime
+                    output.buy_vwap = crnt.vwap
                     output.buy_tradingvalue = crnt.tradingValue
                     output.high_price = crnt.currentPrice
+                    output.high_price_time = crnt.receivedTime
                     output.low_price = crnt.currentPrice
+                    output.low_price_time = crnt.receivedTime
             elif sob < 0:
                 output.sell_count += 1
                 if output.sell_count >= self.sell:
