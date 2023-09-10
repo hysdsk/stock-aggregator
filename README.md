@@ -9,7 +9,7 @@ auカブコム証券のKabuステーションAPIを利用して受信したテ�
 | --- | --- | --- | --- |
 | DEFAULT | tickdata_directory | str | ティック情報を出力するディレクトリパスを設定する。 |
 | DEFAULT | target_filename | str | 集計対象銘柄リストのCSVファイル名を設定する。 |
-| DEFAULT | output_csvname | str | CSV出力する場合の出力先ファイル名を設定する。 |
+| DEFAULT | output_directory | str | CSVの出力先ディレクトリ名を設定する。 |
 
 ``` ini
 [Section]
@@ -25,11 +25,9 @@ python -m stock-aggregator --output console --day <YYYYMM[DD]> --close <10-15>
 ### オプション
 | オプション名 | デフォルト | 内容 |
 | --- | --- | --- |
-| --mode | contract | 集計モードを指定する。<br> - contract: 大約定モード<br> - order: 大注文モード |
 | --output | console | 起動モードを指定する。<br> - console: コンソール出力 <br> - csv: CSV出力（出力先の設定が必須） |
 | --day | None | 集計対象の日付を「YYYYMMDD」形式、または年月を「YYYYMM」形式で指定する。<br>全データを対象とする場合は指定しない。 |
 | --close | 15 | 集計の終了時間を指定する。 |
 | --buy | 1 | 集計の開始価格の買大約定数を指定する。 |
 | --sell | 1 | 集計の終了価格の売大約定数を指定する。 |
 | --offset-minute | 5 | 大注文集計開始時間を寄りから n 分前で指定する。 |
-| --item | short | 出力する項目量を指定する。<br> - short: 簡潔<br> - full: 全て |

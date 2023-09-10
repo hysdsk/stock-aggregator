@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from console import Console, Formater
 from kabustation.message import Message
@@ -6,40 +5,50 @@ from .output import Output
 
 
 class Printer(Console):
-    def __init__(self,
-                 item_len="short",
-                 distfile=None):
-        self.item_len = item_len
+    def __init__(self, distfile=None):
         self.items = [
-            "日付",       # 1
-            "曜日",       # 2
-            "銘柄コード", # 3
-            "銘柄名",     # 4
-            "閾値",       # 5
-            "前日終値",   # 6 -
-            "始値時間",   # 7 -
-            "当日始値",   # 8 -
-            "始値終値比", # 9 -
-            "買約定時間", # 10
-            "買約定価格", # 11
-            "買値始値比", # 12 -
-            "買値VWAP比", # 13 -
-            "安値時間",   # 14 -
-            "安値",       # 15 -
-            "安値買値比", # 16 -
-            "高値時間",   # 17 -
-            "高値",       # 18 -
-            "高値買値比", # 19 -
-            "買約定回数", # 20
-            "売約定回数", # 21
-            "終了時間",   # 22
-            "終了価格",   # 23
-            "終了買値比", # 24
-            "売買代金",   # 25 -
+            "日付",
+            "曜日",
+            "銘柄コード",
+            "銘柄名",
+            "閾値",
+            "前日終値",
+            "前場寄前注文時間",
+            "前場寄前注文回数",
+            "後場寄前注文時間",
+            "後場寄前注文回数",
+            "寄付時間",
+            "寄付価格",
+            "寄時時価総額",
+            "寄時売買代金",
+            "買前売約定時間",
+            "買前売約定価格",
+            "買前売約定回数",
+            "買約定時間",
+            "買約定価格",
+            "買約定回数",
+            "買時売買代金",
+            "買時VWAP",
+            "買時状態",
+            "安値時間",
+            "安値",
+            "高値時間",
+            "高値",
+            "売約定時間",
+            "売約定価格",
+            "売約定回数",
+            "売時状態",
+            "期間内売買代金",
+            "売後買約定回数",
+            "当日安値時間",
+            "当日安値",
+            "当日高値時間",
+            "当日高値",
+            "終了時間",
+            "終了価格",
+            "当日売買代金",
         ]
         if distfile:
-            if os.path.exists(distfile):
-                os.remove(distfile)
             self.writer = open(distfile, mode="a", encoding="utf-8")
             for i, item in enumerate(self.items):
                 row_end = "\n" if i + 1 >= len(self.items) else ","
@@ -47,8 +56,6 @@ class Printer(Console):
         else:
             num = 0
             for i, item in enumerate(self.items):
-                if self.item_len != "full" and i + 1 not in [1, 2, 3, 4, 5, 10, 11, 20, 21, 22, 23, 24]:
-                    continue
                 num += 1
                 print(f"{str(num).rjust(2)}. {item}")
 
@@ -65,94 +72,105 @@ class Printer(Console):
         if num == 5: return "土"
         return "日"
 
-    def out_console(self, message: Message, output: Output, threshold: int):
-        a = ""
-        b = ""
-        c = ""
-        if self.item_len == "full":
-            opening_closing_rate = 0
-            if message.previousClose is not None:
-                opening_closing_rate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
-            buy_vwap_rate = 0
-            if output.buy_vwap is not None:
-                buy_vwap_rate = round((output.buy_price / output.buy_vwap * 100) - 100, 2)
-            buy_opening_rate = round((output.buy_price / message.openingPrice * 100) - 100, 2)
-            low_buy_rate = round((output.low_price / output.buy_price * 100) - 100, 2)
-            high_buy_rate = round((output.high_price / output.buy_price * 100) - 100, 2)
+    def out_console(self, message: Message, output: Output, threshold: int, openingTotalMarketValue: float):
+        if message.is_preparing(): return
+        tradingvalue = 0
+        if output.buy_price is not None:
             tradingvalue = message.tradingValue - output.buy_tradingvalue
-            a = " {} {} {} {}".format(
-                Formater(message.previousClose).price().gray().value,
-                Formater(message.openingPriceTime).time().value,
-                Formater(message.openingPrice).price().green().value,
-                super().formatrate(opening_closing_rate))
-            b = " {} {} {} {} {} {} {} {}". format(
-                super().formatrate(buy_opening_rate),
-                super().formatrate(buy_vwap_rate),
-                Formater(output.low_price_time).time().value,
-                Formater(output.low_price).price().value,
-                super().formatrate(low_buy_rate),
-                Formater(output.high_price_time).time().value,
-                Formater(output.high_price).price().value,
-                super().formatrate(high_buy_rate))
-            c = Formater(tradingvalue).volume().value
 
-        close_buy_rate = round((output.out_price / output.buy_price * 100) - 100, 2)
-        self.print("{}({}) {} {} {} {} {} {} {} {} {} {} {} {} {}".format(
+        template = " ".join(["{}"]*len(self.items))
+        self.print(template.format(
             message.receivedTime.strftime("%Y/%m/%d"),
             self.get_jp_week(message.receivedTime),
             message.symbol,
             Formater(message.symbolName).sname().value,
             Formater(threshold).volume().value,
-            a,
-            Formater(output.buy_time).time().value,
+            Formater(message.previousClose).price().gray().value,
+            str(Formater(output.preparing_m_order_time).time().value).rjust(8),
+            str(output.preparing_m_order_count).rjust(2),
+            str(Formater(output.resting_m_order_time).time().value).rjust(8),
+            str(output.resting_m_order_count).rjust(2),
+            Formater(message.openingPriceTime).time().value,
+            Formater(message.openingPrice).price().green().value,
+            Formater(openingTotalMarketValue).volume().value,
+            Formater(output.opening_tradingvalue).volume().value,
+            str(Formater(output.sell_time_before).time().value).rjust(8),
+            Formater(output.sell_price_before).price().value,
+            str(output.sell_count_before).rjust(2),
+            str(Formater(output.buy_time).time().value).rjust(8),
             Formater(output.buy_price).price().value,
-            b,
             str(output.buy_count).rjust(2),
+            Formater(output.buy_tradingvalue).volume().value,
+            Formater(round(output.buy_vwap, 0) if output.buy_vwap else None).price().value,
+            str(output.buy_status).rjust(9),
+            str(Formater(output.low_price_time).time().value).rjust(8),
+            Formater(output.low_price).price().value,
+            str(Formater(output.high_price_time).time().value).rjust(8),
+            Formater(output.high_price).price().value,
+            str(Formater(output.sell_time).time().value).rjust(8),
+            Formater(output.sell_price).price().value,
             str(output.sell_count).rjust(2),
-            Formater(output.out_time).time().value,
-            Formater(output.out_price).price().value,
-            super().formatrate(close_buy_rate),
-            c))
+            str(output.sell_status).rjust(9),
+            Formater(tradingvalue).volume().value,
+            str(output.buy_count_after).rjust(2),
+            Formater(message.lowPriceTime).time().value,
+            Formater(message.lowPrice).price().value,
+            Formater(message.highPriceTime).time().value,
+            Formater(message.highPrice).price().value,
+            Formater(message.receivedTime).time().value,
+            Formater(message.currentPrice).price().value,
+            Formater(message.tradingValue).volume().value,
+        ))
 
-    def out_csv(self, message: Message, output: Output, threshold: int):
-        close_buy_rate = round((output.out_price / output.buy_price * 100) - 100, 2)
-        buy_opening_rate = round((output.buy_price / message.openingPrice * 100) - 100, 2)
-        low_buy_rate = round((output.low_price / output.buy_price * 100) - 100, 2)
-        high_buy_rate = round((output.high_price / output.buy_price * 100) - 100, 2)
-        opening_closing_rate = 0
-        if message.previousClose is not None:
-            opening_closing_rate = round((message.openingPrice / message.previousClose * 100) - 100, 2)
-        buy_vwap_rate = 0
-        if output.buy_vwap is not None:
-            buy_vwap_rate = round((output.buy_price / output.buy_vwap * 100) - 100, 2)
-        tradingvalue = message.tradingValue - output.buy_tradingvalue
+    def out_csv(self, message: Message, output: Output, threshold: int, openingTotalMarketValue: float):
+        if message.is_preparing(): return
+        tradingvalue = 0
+        if output.buy_price is not None:
+            tradingvalue = message.tradingValue - output.buy_tradingvalue
 
-        self.writer.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+        template = ",".join(["{}"]*len(self.items))
+        self.writer.write(f"{template}\n".format(
             message.receivedTime.strftime("%Y/%m/%d"),
             self.get_jp_week(message.receivedTime),
             message.symbol,
             message.symbolName,
             threshold,
             0 if message.previousClose is None else message.previousClose,
+            Formater(output.preparing_m_order_time).time().value,
+            output.preparing_m_order_count,
+            Formater(output.resting_m_order_time).time().value,
+            output.resting_m_order_count,
             Formater(message.openingPriceTime).time().value,
             message.openingPrice,
-            opening_closing_rate,
+            openingTotalMarketValue,
+            output.opening_tradingvalue,
+            Formater(output.sell_time_before).time().value,
+            output.sell_price_before,
+            output.sell_count_before,
             Formater(output.buy_time).time().value,
             output.buy_price,
-            buy_opening_rate,
-            0 if buy_vwap_rate is None else buy_vwap_rate,
+            output.buy_count,
+            output.buy_tradingvalue,
+            output.buy_vwap,
+            output.buy_status,
             Formater(output.low_price_time).time().value,
             output.low_price,
-            low_buy_rate,
             Formater(output.high_price_time).time().value,
             output.high_price,
-            high_buy_rate,
-            output.buy_count,
+            Formater(output.sell_time).time().value,
+            output.sell_price,
             output.sell_count,
-            Formater(output.out_time).time().value,
-            output.out_price,
-            close_buy_rate,
-            tradingvalue))
+            output.sell_status,
+            tradingvalue,
+            output.buy_count_after,
+            Formater(message.lowPriceTime).time().value,
+            message.lowPrice,
+            Formater(message.highPriceTime).time().value,
+            message.highPrice,
+            Formater(message.receivedTime).time().value,
+            message.currentPrice,
+            message.tradingValue,
+            ))
 
     def close_writer(self):
         if hasattr(self, "writer") and self.writer:

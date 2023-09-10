@@ -8,7 +8,7 @@ import pandas as pd
 from kabustation.message import Message
 from .output import Output
 from .printer import Printer
-from .processor import Processor, ContractProcessor, OrderProcessor
+from .processor import Processor
 
 
 # Global
@@ -19,29 +19,35 @@ config = configparser["DEFAULT"]
 parser = ArgumentParser()
 parser.add_argument("--day", type=str, default=None, help="")
 parser.add_argument("--close", type=int, default=15, choices=range(10, 16), help="")
-parser.add_argument("--mode", type=str, default="contract", choices=["contract", "order"], help="")
 parser.add_argument("--output", type=str, default="console", choices=["console", "csv"], help="")
 parser.add_argument("--buy", type=int, default=1, help="")
 parser.add_argument("--sell", type=int, default=1, help="")
 parser.add_argument("--offset-minute", type=int, default=5, choices=range(1, 31), help="")
-parser.add_argument("--item", type=str, default="short", choices=["short", "full"], help="")
 args = parser.parse_args()
 
 am8 = datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
 close_time = datetime.now().replace(hour=args.close, minute=0, second=0, microsecond=0)
 if args.close == 15:
-    close_time = datetime.now().replace(hour=14, minute=59, second=55, microsecond=0)
+    close_time = datetime.now().replace(hour=14, minute=59, second=50, microsecond=0)
 
 df = pd.read_csv(config["target_filename"], dtype={"code": str}, skipinitialspace=True).rename(columns=lambda x: x.strip())
 thresholds = { target["code"]: target["th_value"] * 10000 for target in df.to_dict("records") }
 
-printer = Printer(item_len=args.item, distfile=config["output_csvname"]) if args.output == "csv" else Printer(item_len=args.item)
+outdir = config["output_directory"][:-1] if config["output_directory"][-1] == "/" else config["output_directory"]
+csvname = f"{outdir}/aggregated.{int(datetime.now().timestamp())}.csv"
+printer = Printer(distfile=csvname) if args.output == "csv" else Printer()
 
 
 # each data
 def check_data(lines: list):
-    proccesor: Processor = OrderProcessor(thresholds, args.buy, args.sell, args.offset_minute) \
-        if args.mode == "order" else ContractProcessor(thresholds, args.buy, args.sell)
+    threshold = thresholds[Message(json.loads(lines[0])).symbol]
+    openingTotalMarketValue = None
+    for line in lines:
+       msg = Message(json.loads(line))
+       if msg.totalMarketValue is not None:
+           openingTotalMarketValue = msg.totalMarketValue
+           break
+    proccesor: Processor = Processor(threshold, args.buy, args.sell, args.offset_minute)
     output = Output()
     messages: list[Message] = []
     for line in lines:
@@ -50,18 +56,12 @@ def check_data(lines: list):
             continue
         if crnt.receivedTime.time() >= close_time.time():
             break
-
         messages.append(Message(json.loads(line)))
-        if proccesor.run(messages, output) == 1:
-            break
-
-    if output.buy_count >= args.buy and output.buy_price:
-        output.out_price = messages[-1].currentPrice
-        output.out_time = messages[-1].currentPriceTime
-        if args.output == "csv":
-            printer.out_csv(messages[-1], output, thresholds[crnt.symbol])
-        else:
-            printer.out_console(messages[-1], output, thresholds[crnt.symbol])
+        proccesor.run(messages, output)
+    if args.output == "csv":
+        printer.out_csv(messages[-1], output, threshold, openingTotalMarketValue)
+    else:
+        printer.out_console(messages[-1], output, threshold, openingTotalMarketValue)
 
 # each symbol process
 def open_file(targetdate: int, file: str):
