@@ -1,6 +1,7 @@
 import os
 import json
 import re
+from tqdm import tqdm
 from configparser import ConfigParser
 from argparse import ArgumentParser
 from datetime import datetime
@@ -85,17 +86,20 @@ def main(targetdate: str):
         open_file(targetdate, file)
 
 if __name__ == "__main__":
-    print("Now aggregating ...")
     try:
-        if args.day is None:
-            for targetdate in os.listdir(config["tickdata_directory"]):
+        targetdatelist = os.listdir(config["tickdata_directory"])
+        if args.day and re.compile(r"^[0-9]{6}$").match(args.day):
+            targetdatelist = [t for t in targetdatelist if t.startswith(args.day)]
+        elif args.day and re.compile(r"^[0-9]{8}$").match(args.day):
+            targetdatelist = [t for t in targetdatelist if t == args.day]
+        if args.output == "csv":
+            print(f"The output destination is {csvname}")
+            desc=f"Aggregate data for {len(targetdatelist)} days"
+            bar_format="{l_bar}\033[32m{bar}\033[0m{r_bar}"
+            for targetdate in tqdm(targetdatelist, desc=desc, bar_format=bar_format):
                 main(targetdate)
-        elif re.compile(r"^[0-9]{6}$").match(args.day):
-            for targetdate in os.listdir(config["tickdata_directory"]):
-                if targetdate.startswith(args.day): main(targetdate)
-        elif re.compile(r"^[0-9]{8}$").match(args.day):
-            main(args.day)
         else:
-            print(f"Invalid day: {args.day}")
+            for targetdate in targetdatelist:
+                main(targetdate)
     finally:
         printer.close_writer()
