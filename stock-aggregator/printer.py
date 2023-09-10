@@ -124,8 +124,8 @@ class Printer(Console):
 
     def out_csv(self, message: Message, output: Output, threshold: int, openingTotalMarketValue: float):
         if message.is_preparing(): return
-        tradingvalue = 0
-        if output.buy_price is not None:
+        tradingvalue = None
+        if output.buy_tradingvalue is not None:
             tradingvalue = message.tradingValue - output.buy_tradingvalue
 
         template = ",".join(["{}"]*len(self.items))
@@ -135,33 +135,33 @@ class Printer(Console):
             message.symbol,
             message.symbolName,
             threshold,
-            0 if message.previousClose is None else message.previousClose,
+            message.previousClose if message.previousClose else "",
             openingTotalMarketValue,
-            Formater(output.preparing_m_order_time).time().value,
+            Formater(output.preparing_m_order_time).time().value if output.preparing_m_order_time else "",
             output.preparing_m_order_count,
-            Formater(output.resting_m_order_time).time().value,
+            Formater(output.resting_m_order_time).time().value if output.resting_m_order_time else "",
             output.resting_m_order_count,
             Formater(message.openingPriceTime).time().value,
             message.openingPrice,
             output.opening_tradingvalue,
-            Formater(output.sell_time_before).time().value,
-            output.sell_price_before,
+            Formater(output.sell_time_before).time().value if output.sell_time_before else "",
+            output.sell_price_before if output.sell_price_before else "",
             output.sell_count_before,
-            Formater(output.buy_time).time().value,
-            output.buy_price,
+            Formater(output.buy_time).time().value if output.buy_time else "",
+            output.buy_price if output.buy_price else "",
             output.buy_count,
-            output.buy_tradingvalue,
-            output.buy_vwap,
-            output.buy_status,
-            Formater(output.low_price_time).time().value,
-            output.low_price,
-            Formater(output.high_price_time).time().value,
-            output.high_price,
-            Formater(output.sell_time).time().value,
-            output.sell_price,
+            output.buy_tradingvalue if output.buy_tradingvalue else "",
+            output.buy_vwap if output.buy_vwap else "",
+            output.buy_status if output.buy_status else "",
+            Formater(output.low_price_time).time().value if output.low_price_time else "",
+            output.low_price if output.low_price else "",
+            Formater(output.high_price_time).time().value if output.high_price_time else "",
+            output.high_price if output.high_price else "",
+            Formater(output.sell_time).time().value if output.sell_time else "",
+            output.sell_price if output.sell_price else "",
             output.sell_count,
-            output.sell_status,
-            tradingvalue,
+            output.sell_status if output.sell_status else "",
+            tradingvalue if tradingvalue else "",
             output.buy_count_after,
             Formater(message.lowPriceTime).time().value,
             message.lowPrice,

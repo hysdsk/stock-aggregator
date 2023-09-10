@@ -6,7 +6,7 @@ class Output(object):
         self.buy_count = 0
         self.buy_count_after = 0
         self.buy_status = None
-        self.buy_tradingvalue = 0
+        self.buy_tradingvalue = None
         self.sell_price = None
         self.sell_time = None
         self.sell_vwap = None
@@ -15,7 +15,7 @@ class Output(object):
         self.sell_time_before = None
         self.sell_count_before = 0
         self.sell_status = None
-        self.sell_tradingvalue = 0
+        self.sell_tradingvalue = None
         self.high_price = None
         self.low_price = None
         self.high_price_time = None
