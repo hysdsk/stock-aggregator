@@ -101,5 +101,7 @@ if __name__ == "__main__":
         else:
             for targetdate in targetdatelist:
                 main(targetdate)
+    except KeyboardInterrupt:
+        print("You typed \"CTRL + C\", which is the keyboard interrupt exception.")
     finally:
         printer.close_writer()
