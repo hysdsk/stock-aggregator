@@ -45,7 +45,7 @@ def check_data(lines: list):
     openingTotalMarketValue = None
     for line in lines:
        msg = Message(json.loads(line))
-       if msg.totalMarketValue is not None:
+       if msg.totalMarketValue:
            openingTotalMarketValue = msg.totalMarketValue
            break
     proccesor: Processor = Processor(threshold, args.buy, args.sell, args.offset_minute)
@@ -75,13 +75,11 @@ def main(targetdate: str):
     pattern_json = re.compile(r"^[0-9]{4}\.json$")
     files = os.listdir(f"{config['tickdata_directory']}/{targetdate}")
     if "incomplete" in files:
-        print(f"{targetdate} is incomplete files.")
         return
 
     for file in [f for f in files if pattern_json.match(f)]:
         code = file.replace(".json", "")
         if code in ["101", "151", "154"] or code not in thresholds:
-            print(f"Not found \"{code}\" in symbols csv.")
             continue
         open_file(targetdate, file)
 
@@ -105,3 +103,4 @@ if __name__ == "__main__":
         print("You typed \"CTRL + C\", which is the keyboard interrupt exception.")
     finally:
         printer.close_writer()
+        print("Aggregation has finished.")

@@ -92,6 +92,7 @@ class Processor(object):
                 output.low_price_time = crnt.receivedTime
 
         value = crnt.tradingValue - prev.tradingValue
+        output.add_lastminutehistories(crnt.receivedTime, value)
         if value > self.threshold:
             sob = self.sellorbuy(crnt, prev)
             if sob > 0:
@@ -105,6 +106,7 @@ class Processor(object):
                     output.buy_vwap = crnt.vwap
                     output.buy_status = self.status(crnt, prev)
                     output.buy_tradingvalue = crnt.tradingValue
+                    output.set_buy_lastminute()
                     if output.sell_count < self.sell_count:
                         output.high_price = crnt.currentPrice
                         output.high_price_time = crnt.receivedTime
@@ -118,6 +120,7 @@ class Processor(object):
                     if output.sell_price_before is None:
                         output.sell_price_before = crnt.currentPrice
                         output.sell_time_before = crnt.receivedTime
+                        output.set_sell_lastminute()
                 if output.sell_count >= self.sell_count and output.sell_price is None:
                     output.sell_price = crnt.currentPrice
                     output.sell_time = crnt.currentPriceTime
