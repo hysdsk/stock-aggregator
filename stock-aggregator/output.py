@@ -33,6 +33,9 @@ class Output(object):
         self.preparing_m_order_count = 0
         self.resting_m_order_time = None
         self.resting_m_order_count = 0
+        self.last_message = None
+        self.threshold = None
+        self.opening_totalmarketvalue = None
 
     def set_buy_lastminute(self):
         self.buy_tradingvalue_byminute = self.tradingvalue_byminute()

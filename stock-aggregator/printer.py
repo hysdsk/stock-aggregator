@@ -1,11 +1,15 @@
+from abc import ABC, abstractmethod
 from datetime import datetime
-from console import Console, Formater
-from kabustation.message import Message
+from configparser import ConfigParser
+from console import Formater
 from .output import Output
 
 
-class Printer(Console):
-    def __init__(self, distfile=None):
+class Printer(ABC):
+    def __init__(self):
+        configparser = ConfigParser()
+        configparser.read("config.ini")
+        self.config = configparser["DEFAULT"]
         self.items = [
             "日付",
             "曜日",
@@ -52,19 +56,6 @@ class Printer(Console):
             "終了価格",
             "当日売買代金",
         ]
-        if distfile:
-            self.writer = open(distfile, mode="a", encoding="utf-8")
-            for i, item in enumerate(self.items):
-                row_end = "\n" if i + 1 >= len(self.items) else ","
-                self.writer.write(f"{item}{row_end}")
-        else:
-            num = 0
-            for i, item in enumerate(self.items):
-                num += 1
-                print(f"{str(num).rjust(2)}. {item}")
-
-    def print(self, content: str):
-        super().print(content)
 
     def get_jp_week(self, thatday: datetime):
         num = thatday.weekday()
@@ -76,27 +67,42 @@ class Printer(Console):
         if num == 5: return "土"
         return "日"
 
-    def out_console(self, message: Message, output: Output, threshold: int, openingTotalMarketValue: float):
-        if message.is_preparing(): return
+    @abstractmethod
+    def out(self, output: Output):
+        pass
+
+    @abstractmethod
+    def close(self):
+        pass
+
+
+class ConsolePrinter(Printer):
+    def __init__(self):
+        super().__init__()
+        for i, item in enumerate(self.items):
+            print(f"{str(i+1).rjust(2)}. {item}")
+
+    def out(self, output: Output):
+        if output.last_message.is_preparing(): return
         tradingvalue = 0
         if output.buy_price is not None:
-            tradingvalue = message.tradingValue - output.buy_tradingvalue
+            tradingvalue = output.last_message.tradingValue - output.buy_tradingvalue
 
         template = " ".join(["{}"]*len(self.items))
-        self.print(template.format(
-            message.receivedTime.strftime("%Y/%m/%d"),
-            self.get_jp_week(message.receivedTime),
-            message.symbol,
-            Formater(message.symbolName).sname().value,
-            Formater(threshold).volume().value,
-            Formater(message.previousClose).price().gray().value,
-            Formater(openingTotalMarketValue).volume().value,
+        print(template.format(
+            output.last_message.receivedTime.strftime("%Y/%m/%d"),
+            self.get_jp_week(output.last_message.receivedTime),
+            output.last_message.symbol,
+            Formater(output.last_message.symbolName).sname().value,
+            Formater(output.threshold).volume().value,
+            Formater(output.last_message.previousClose).price().gray().value,
+            Formater(output.opening_totalmarketvalue).volume().value,
             str(Formater(output.preparing_m_order_time).time().value).rjust(8),
             str(output.preparing_m_order_count).rjust(2),
             str(Formater(output.resting_m_order_time).time().value).rjust(8),
             str(output.resting_m_order_count).rjust(2),
-            Formater(message.openingPriceTime).time().value,
-            Formater(message.openingPrice).price().green().value,
+            Formater(output.last_message.openingPriceTime).time().value,
+            Formater(output.last_message.openingPrice).price().green().value,
             Formater(output.opening_tradingvalue).volume().value,
             str(Formater(output.sell_time_before).time().value).rjust(8),
             Formater(output.sell_price_before).price().value,
@@ -121,36 +127,50 @@ class Printer(Console):
             Formater(tradingvalue).volume().value,
             str(output.sell_status).rjust(9),
             str(output.buy_count_after).rjust(2),
-            Formater(message.lowPriceTime).time().value,
-            Formater(message.lowPrice).price().value,
-            Formater(message.highPriceTime).time().value,
-            Formater(message.highPrice).price().value,
-            Formater(message.receivedTime).time().value,
-            Formater(message.currentPrice).price().value,
-            Formater(message.tradingValue).volume().value,
+            Formater(output.last_message.lowPriceTime).time().value,
+            Formater(output.last_message.lowPrice).price().value,
+            Formater(output.last_message.highPriceTime).time().value,
+            Formater(output.last_message.highPrice).price().value,
+            Formater(output.last_message.receivedTime).time().value,
+            Formater(output.last_message.currentPrice).price().value,
+            Formater(output.last_message.tradingValue).volume().value,
         ))
 
-    def out_csv(self, message: Message, output: Output, threshold: int, openingTotalMarketValue: float):
-        if message.is_preparing(): return
+    def close(self):
+        pass
+
+
+class CsvPrinter(Printer):
+    def __init__(self):
+        super().__init__()
+        outdir = self.config["output_directory"][:-1] if self.config["output_directory"][-1] == "/" else self.config["output_directory"]
+        self.csvname = f"{outdir}/aggregated.{int(datetime.now().timestamp())}.csv"
+        self.writer = open(self.csvname, mode="a", encoding="utf-8")
+        for i, item in enumerate(self.items):
+            row_end = "\n" if i + 1 >= len(self.items) else ","
+            self.writer.write(f"{item}{row_end}")
+
+    def out(self, output: Output):
+        if output.last_message.is_preparing(): return
         tradingvalue = None
         if output.buy_tradingvalue is not None:
-            tradingvalue = message.tradingValue - output.buy_tradingvalue
+            tradingvalue = output.last_message.tradingValue - output.buy_tradingvalue
 
         template = ",".join(["{}"]*len(self.items))
         self.writer.write(f"{template}\n".format(
-            message.receivedTime.strftime("%Y/%m/%d"),
-            self.get_jp_week(message.receivedTime),
-            message.symbol,
-            message.symbolName,
-            threshold,
-            message.previousClose if message.previousClose else "",
-            openingTotalMarketValue,
+            output.last_message.receivedTime.strftime("%Y/%m/%d"),
+            self.get_jp_week(output.last_message.receivedTime),
+            output.last_message.symbol,
+            output.last_message.symbolName,
+            output.threshold,
+            output.last_message.previousClose if output.last_message.previousClose else "",
+            output.opening_totalmarketvalue,
             Formater(output.preparing_m_order_time).time().value if output.preparing_m_order_time else "",
             output.preparing_m_order_count,
             Formater(output.resting_m_order_time).time().value if output.resting_m_order_time else "",
             output.resting_m_order_count,
-            Formater(message.openingPriceTime).time().value,
-            message.openingPrice,
+            Formater(output.last_message.openingPriceTime).time().value,
+            output.last_message.openingPrice,
             output.opening_tradingvalue,
             Formater(output.sell_time_before).time().value if output.sell_time_before else "",
             output.sell_price_before if output.sell_price_before else "",
@@ -175,15 +195,14 @@ class Printer(Console):
             tradingvalue if tradingvalue else "",
             output.sell_status if output.sell_status else "",
             output.buy_count_after,
-            Formater(message.lowPriceTime).time().value,
-            message.lowPrice,
-            Formater(message.highPriceTime).time().value,
-            message.highPrice,
-            Formater(message.receivedTime).time().value,
-            message.currentPrice,
-            message.tradingValue,
-            ))
+            Formater(output.last_message.lowPriceTime).time().value,
+            output.last_message.lowPrice,
+            Formater(output.last_message.highPriceTime).time().value,
+            output.last_message.highPrice,
+            Formater(output.last_message.receivedTime).time().value,
+            output.last_message.currentPrice,
+            output.last_message.tradingValue,
+        ))
 
-    def close_writer(self):
-        if hasattr(self, "writer") and self.writer:
-            self.writer.close()
+    def close(self):
+        self.writer.close()
