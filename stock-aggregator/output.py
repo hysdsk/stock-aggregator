@@ -5,6 +5,7 @@ class Output(object):
     def __init__(self) -> None:
         self.lastminutehistories: list[TradingValueHistory] = []
         self.buy_price = None
+        self.buy_prev_price = None
         self.buy_time = None
         self.buy_vwap = None
         self.buy_count = 0
@@ -14,6 +15,7 @@ class Output(object):
         self.buy_tradingvalue_byminute = 0
         self.buy_updatecount_byminute = 0
         self.sell_price = None
+        self.sell_prev_price = None
         self.sell_time = None
         self.sell_vwap = None
         self.sell_count = 0

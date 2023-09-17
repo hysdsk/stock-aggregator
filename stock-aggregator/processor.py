@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import time
 from kabustation.message import Message
 from .output import Output
 
@@ -14,12 +14,12 @@ class Processor(object):
             thresholds=None) -> None:
         self.buy_count = buy_count
         self.sell_count = sell_count
-        self.preparing_time = datetime.now().replace(hour=8, minute=60-offset_minute, second=0, microsecond=0)
-        self.resting_time = datetime.now().replace(hour=12, minute=30-offset_minute, second=0, microsecond=0)
-        self.start_time = datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
-        self.close_time = datetime.now().replace(hour=close, minute=0, second=0, microsecond=0)
+        self.preparing_time = time(hour=8, minute=60-offset_minute, second=0, microsecond=0)
+        self.resting_time = time(hour=12, minute=30-offset_minute, second=0, microsecond=0)
+        self.start_time = time(hour=8, minute=0, second=0, microsecond=0)
+        self.close_time = time(hour=close, minute=0, second=0, microsecond=0)
         if close == 15:
-            self.close_time = datetime.now().replace(hour=14, minute=59, second=50, microsecond=0)
+            self.close_time = time(hour=14, minute=59, second=50, microsecond=0)
         self.thresholds = thresholds
 
     def _sellorbuy(self, crnt: Message, prev: Message):
@@ -79,7 +79,7 @@ class Processor(object):
             return 0
         prev = messages[-2]
         # 前場寄り前
-        if crnt.is_preparing() and crnt.receivedTime.time() >= self.preparing_time.time():
+        if crnt.is_preparing() and crnt.receivedTime.time() >= self.preparing_time:
             value = (crnt.marketOrderBuyQty - prev.marketOrderBuyQty) * crnt.calcPrice
             if value > output.threshold:
                 output.preparing_m_order_count += 1
@@ -90,7 +90,7 @@ class Processor(object):
                     output.preparing_m_order_count -= 1
                     output.preparing_m_order_time = None
         # 後場寄り前
-        if crnt.is_resting() and crnt.receivedTime.time() >= self.resting_time.time():
+        if crnt.is_resting() and crnt.receivedTime.time() >= self.resting_time:
             value = (crnt.marketOrderBuyQty - prev.marketOrderBuyQty) * crnt.calcPrice
             if value > output.threshold:
                 output.resting_m_order_count += 1
@@ -125,6 +125,7 @@ class Processor(object):
                     output.buy_count_after += 1
                 if output.buy_count >= self.buy_count and output.buy_price is None:
                     output.buy_price = crnt.currentPrice
+                    output.buy_prev_price = prev.currentPrice
                     output.buy_time = crnt.currentPriceTime
                     output.buy_vwap = crnt.vwap
                     output.buy_status = self._status(crnt, prev)
@@ -143,13 +144,14 @@ class Processor(object):
                     if output.sell_price_before is None:
                         output.sell_price_before = crnt.currentPrice
                         output.sell_time_before = crnt.receivedTime
-                        output.set_sell_lastminute()
                 if output.sell_count >= self.sell_count and output.sell_price is None:
                     output.sell_price = crnt.currentPrice
+                    output.sell_prev_price = prev.currentPrice
                     output.sell_time = crnt.currentPriceTime
                     output.sell_vwap = crnt.vwap
                     output.sell_status = self._status(crnt, prev)
                     output.sell_tradingvalue = crnt.tradingValue
+                    output.set_sell_lastminute()
         return 0
 
     def run(self, lines: list[str]):
@@ -157,9 +159,9 @@ class Processor(object):
         output = Output()
         for line in lines:
             crnt = Message(json.loads(line))
-            if crnt.receivedTime.time() < self.start_time.time():
+            if crnt.receivedTime.time() < self.start_time:
                 continue
-            if crnt.receivedTime.time() >= self.close_time.time():
+            if crnt.receivedTime.time() >= self.close_time:
                 break
             if crnt.totalMarketValue is None:
                 continue
@@ -168,7 +170,8 @@ class Processor(object):
                 if self.thresholds:
                     output.threshold = self.thresholds[crnt.symbol]
                 else:
-                    output.threshold = self._calc_threshold(crnt.totalMarketValue)
+                    threshold = self._calc_threshold(crnt.totalMarketValue)
+                    output.threshold = 50000000 if threshold > 50000000 else threshold
             messages.append(crnt)
             self.process(messages, output)
         output.last_message = messages[-1]

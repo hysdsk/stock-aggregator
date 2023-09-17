@@ -3,7 +3,6 @@ import re
 from tqdm import tqdm
 from configparser import ConfigParser
 from argparse import ArgumentParser
-from datetime import datetime
 from .workflow import Workflow
 from .printer import Printer, ConsolePrinter, CsvPrinter
 
