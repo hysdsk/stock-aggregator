@@ -8,6 +8,10 @@ class Output(object):
         self.buy_prev_price = None
         self.buy_time = None
         self.buy_vwap = None
+        self.buy_low_price = None
+        self.buy_low_price_time = None
+        self.buy_high_price = None
+        self.buy_high_price_time = None
         self.buy_count = 0
         self.buy_count_after = 0
         self.buy_status = None

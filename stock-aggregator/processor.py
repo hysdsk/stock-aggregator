@@ -17,6 +17,7 @@ class Processor(object):
         self.preparing_time = time(hour=8, minute=60-offset_minute, second=0, microsecond=0)
         self.resting_time = time(hour=12, minute=30-offset_minute, second=0, microsecond=0)
         self.start_time = time(hour=8, minute=0, second=0, microsecond=0)
+        self.close_first_time = time(hour=11, minute=30, second=0, microsecond=0)
         self.close_time = time(hour=close, minute=0, second=0, microsecond=0)
         if close == 15:
             self.close_time = time(hour=14, minute=59, second=50, microsecond=0)
@@ -89,6 +90,10 @@ class Processor(object):
                 if crnt.askSign == prev.askSign and crnt.bidSign == prev.bidSign:
                     output.preparing_m_order_count -= 1
                     output.preparing_m_order_time = None
+        # 寄っていない場合は終了
+        if prev.is_preparing():
+            if not crnt.is_preparing(): output.opening_tradingvalue = crnt.tradingValue
+            return 0
         # 後場寄り前
         if crnt.is_resting() and crnt.receivedTime.time() >= self.resting_time:
             value = (crnt.marketOrderBuyQty - prev.marketOrderBuyQty) * crnt.calcPrice
@@ -100,10 +105,6 @@ class Processor(object):
                 if crnt.askSign == prev.askSign and crnt.bidSign == prev.bidSign:
                     output.resting_m_order_count -= 1
                     output.resting_m_order_time = None
-        # 寄っていない場合は終了
-        if prev.is_preparing():
-            if not crnt.is_preparing(): output.opening_tradingvalue = crnt.tradingValue
-            return 0
         # 買約定後に売約定出るまで安値と高値を更新する
         if output.buy_count >= self.buy_count and output.sell_count < self.sell_count:
             if output.high_price < crnt.currentPrice:
@@ -116,7 +117,8 @@ class Processor(object):
         value = crnt.tradingValue - prev.tradingValue
         output.add_lastminutehistories(crnt.receivedTime, value)
         status = self._status(crnt, prev)
-        if value >= output.threshold and status == "opening":
+        is_close_first = self.close_first_time == crnt.currentPriceTime.time()
+        if value >= output.threshold and status == "opening" and not is_close_first:
             sob = self._sellorbuy(crnt, prev)
             if sob > 0:
                 if output.sell_count < self.sell_count:
@@ -128,6 +130,10 @@ class Processor(object):
                     output.buy_prev_price = prev.currentPrice
                     output.buy_time = crnt.currentPriceTime
                     output.buy_vwap = crnt.vwap
+                    output.buy_low_price_time = crnt.lowPriceTime
+                    output.buy_low_price = crnt.lowPrice
+                    output.buy_high_price_time = crnt.highPriceTime
+                    output.buy_high_price = crnt.highPrice
                     output.buy_status = self._status(crnt, prev)
                     output.buy_tradingvalue = crnt.tradingValue
                     output.set_buy_lastminute()
