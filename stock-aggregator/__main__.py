@@ -23,7 +23,7 @@ args = parser.parse_args()
 
 
 if __name__ == "__main__":
-    printer: Printer = CsvPrinter() if args.output == "csv" else ConsolePrinter()
+    printer: Printer = CsvPrinter(args.buy, args.sell) if args.output == "csv" else ConsolePrinter()
     try:
         targetdatelist = os.listdir(config["tickdata_directory"])
         if args.day and re.compile(r"^[0-9]{6}$").match(args.day):

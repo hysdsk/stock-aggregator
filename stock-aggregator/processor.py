@@ -14,13 +14,10 @@ class Processor(object):
             thresholds=None) -> None:
         self.buy_count = buy_count
         self.sell_count = sell_count
-        self.preparing_time = time(hour=8, minute=60-offset_minute, second=0, microsecond=0)
-        self.resting_time = time(hour=12, minute=30-offset_minute, second=0, microsecond=0)
-        self.start_time = time(hour=8, minute=0, second=0, microsecond=0)
-        self.close_first_time = time(hour=11, minute=30, second=0, microsecond=0)
-        self.close_time = time(hour=close, minute=0, second=0, microsecond=0)
-        if close == 15:
-            self.close_time = time(hour=14, minute=59, second=50, microsecond=0)
+        self.preparing_time = time(hour=8, minute=60-offset_minute)
+        self.resting_time = time(hour=12, minute=30-offset_minute)
+        self.start_time = time(hour=8, minute=0)
+        self.close_time = time(hour=close-1, minute=59, second=55)
         self.thresholds = thresholds
 
     def _sellorbuy(self, crnt: Message, prev: Message):
@@ -58,6 +55,9 @@ class Processor(object):
         elif crnt.is_closing():
             # 後場引け時
             return "closing"
+        elif not crnt.is_preparing() and crnt.currentPriceTime.time() == time(hour=11, minute=30):
+            # 前場引け時
+            return "tempbreak"
         else:
             # ザラ場通常時
             return "opening"
@@ -107,18 +107,26 @@ class Processor(object):
                     output.resting_m_order_time = None
         # 買約定後に売約定出るまで安値と高値を更新する
         if output.buy_count >= self.buy_count and output.sell_count < self.sell_count:
-            if output.high_price < crnt.currentPrice:
-                output.high_price = crnt.currentPrice
-                output.high_price_time = crnt.receivedTime
             if output.low_price > crnt.currentPrice:
                 output.low_price = crnt.currentPrice
                 output.low_price_time = crnt.receivedTime
+            if output.high_price < crnt.currentPrice:
+                output.high_price = crnt.currentPrice
+                output.high_price_time = crnt.receivedTime
+            vwap_diff = crnt.currentPrice - crnt.vwap
+            if output.low_vwap_diff > vwap_diff:
+                output.low_vwap_diff_time = crnt.receivedTime
+                output.low_vwap_diff_price = crnt.vwap
+                output.low_vwap_diff = vwap_diff
+            if output.high_vwap_diff < vwap_diff:
+                output.high_vwap_diff_time = crnt.receivedTime
+                output.high_vwap_diff_price = crnt.vwap
+                output.high_vwap_diff = vwap_diff
         # 閾値で大約定を取得する
         value = crnt.tradingValue - prev.tradingValue
         output.add_lastminutehistories(crnt.receivedTime, value)
         status = self._status(crnt, prev)
-        is_close_first = self.close_first_time == crnt.currentPriceTime.time()
-        if value >= output.threshold and status == "opening" and not is_close_first:
+        if value >= output.threshold and status == "opening":
             sob = self._sellorbuy(crnt, prev)
             if sob > 0:
                 if output.sell_count < self.sell_count:
@@ -138,10 +146,17 @@ class Processor(object):
                     output.buy_tradingvalue = crnt.tradingValue
                     output.set_buy_lastminute()
                     if output.sell_count < self.sell_count:
-                        output.high_price = crnt.currentPrice
-                        output.high_price_time = crnt.receivedTime
                         output.low_price = crnt.currentPrice
                         output.low_price_time = crnt.receivedTime
+                        output.high_price = crnt.currentPrice
+                        output.high_price_time = crnt.receivedTime
+                        vwap_diff = crnt.currentPrice - crnt.vwap
+                        output.low_vwap_diff_time = crnt.receivedTime
+                        output.low_vwap_diff_price = crnt.vwap
+                        output.low_vwap_diff = vwap_diff
+                        output.high_vwap_diff_time = crnt.receivedTime
+                        output.high_vwap_diff_price = crnt.vwap
+                        output.high_vwap_diff = vwap_diff
             elif sob < 0:
                 if output.buy_count >= self.buy_count:
                     output.sell_count += 1

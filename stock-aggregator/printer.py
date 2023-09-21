@@ -45,6 +45,12 @@ class Printer(ABC):
             "安値",
             "高値時間",
             "高値",
+            "VWAP負乖離時間",
+            "VWAP負乖離時価格",
+            "VWAP負乖離時VWAP",
+            "VWAP正乖離時間",
+            "VWAP正乖離時価格",
+            "VWAP正乖離時VWAP",
             "売約定時間",
             "売約定価格",
             "売約定直前価格",
@@ -131,6 +137,12 @@ class ConsolePrinter(Printer):
             Formater(output.low_price).price().value,
             str(Formater(output.high_price_time).time().value).rjust(8),
             Formater(output.high_price).price().value,
+            str(Formater(output.low_vwap_diff_time).time().value).rjust(8),
+            Formater(output.low_vwap_diff_price + output.low_vwap_diff if output.low_vwap_diff else None).price().value,
+            Formater(output.low_vwap_diff_price).price().value,
+            str(Formater(output.high_vwap_diff_time).time().value).rjust(8),
+            Formater(output.high_vwap_diff_price + output.high_vwap_diff if output.high_vwap_diff else None).price().value,
+            Formater(output.high_vwap_diff_price).price().value,
             str(Formater(output.sell_time).time().value).rjust(8),
             Formater(output.sell_price).price().value,
             Formater(output.sell_prev_price).price().value,
@@ -155,10 +167,10 @@ class ConsolePrinter(Printer):
 
 
 class CsvPrinter(Printer):
-    def __init__(self):
+    def __init__(self, buyCount: int, sellCount: int):
         super().__init__()
         outdir = self.config["output_directory"][:-1] if self.config["output_directory"][-1] == "/" else self.config["output_directory"]
-        self.csvname = f"{outdir}/aggregated.{int(datetime.now().timestamp())}.csv"
+        self.csvname = f"{outdir}/aggregated_b{buyCount}s{sellCount}.{int(datetime.now().timestamp())}.csv"
         self.writer = open(self.csvname, mode="a", encoding="utf-8")
         for i, item in enumerate(self.items):
             row_end = "\n" if i + 1 >= len(self.items) else ","
@@ -198,14 +210,20 @@ class CsvPrinter(Printer):
             output.buy_tradingvalue if output.buy_tradingvalue else "",
             output.buy_vwap if output.buy_vwap else "",
             Formater(output.buy_low_price_time).time().value if output.buy_low_price_time else "",
-            output.buy_low_price,
+            output.buy_low_price if output.buy_low_price else "",
             Formater(output.buy_high_price_time).time().value if output.buy_high_price_time else "",
-            output.buy_high_price,
+            output.buy_high_price if output.buy_high_price else "",
             output.buy_status if output.buy_status else "",
             Formater(output.low_price_time).time().value if output.low_price_time else "",
             output.low_price if output.low_price else "",
             Formater(output.high_price_time).time().value if output.high_price_time else "",
             output.high_price if output.high_price else "",
+            Formater(output.low_vwap_diff_time).time().value if output.low_vwap_diff_time else "",
+            output.low_vwap_diff_price + output.low_vwap_diff if output.low_vwap_diff_price else "",
+            output.low_vwap_diff_price if output.low_vwap_diff_price else "",
+            Formater(output.high_vwap_diff_time).time().value if output.high_vwap_diff_time else "",
+            output.high_vwap_diff_price + output.high_vwap_diff if output.high_vwap_diff_price else "",
+            output.high_vwap_diff_price if output.high_vwap_diff_price else "",
             Formater(output.sell_time).time().value if output.sell_time else "",
             output.sell_price if output.sell_price else "",
             output.sell_prev_price if output.sell_prev_price else "",
