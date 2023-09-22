@@ -1,24 +1,26 @@
 import json
-from datetime import time
+from datetime import datetime, time, timedelta
 from kabustation.message import Message
-from .output import Output
+from .output import Output, Contract, Order
 
 
 class Processor(object):
     def __init__(
             self,
-            buy_count: int,
-            sell_count: int,
             offset_minute: int,
-            close: int,
             thresholds=None) -> None:
-        self.buy_count = buy_count
-        self.sell_count = sell_count
         self.preparing_time = time(hour=8, minute=60-offset_minute)
         self.resting_time = time(hour=12, minute=30-offset_minute)
         self.start_time = time(hour=8, minute=0)
-        self.close_time = time(hour=close-1, minute=59, second=55)
+        self.close_time = time(hour=14, minute=59, second=55)
         self.thresholds = thresholds
+        self.lastMinuteHistories: list[TradingValueHistory] = []
+
+    def _addLastMinuteHistories(self, receivedtime: datetime, tradingvalue: int):
+        self.lastMinuteHistories.append(TradingValueHistory(receivedtime.time(), tradingvalue))
+        recenttime = receivedtime - timedelta(minutes=1)
+        while self.lastMinuteHistories[0].receivedtime < recenttime.time():
+            del self.lastMinuteHistories[0]
 
     def _sellorbuy(self, crnt: Message, prev: Message):
         prevprice = crnt.previousClose if prev.is_preparing() else prev.currentPrice
@@ -83,13 +85,10 @@ class Processor(object):
         if crnt.is_preparing() and crnt.receivedTime.time() >= self.preparing_time:
             value = (crnt.marketOrderBuyQty - prev.marketOrderBuyQty) * crnt.calcPrice
             if value > output.threshold:
-                output.preparing_m_order_count += 1
-                if output.preparing_m_order_time is None:
-                    output.preparing_m_order_time = crnt.receivedTime
-            elif -1*value > output.threshold and output.preparing_m_order_count > 0:
+                output.firstOrders.append(Order(crnt.receivedTime, value))
+            elif -1*value > output.threshold and len(output.firstOrders) > 0:
                 if crnt.askSign == prev.askSign and crnt.bidSign == prev.bidSign:
-                    output.preparing_m_order_count -= 1
-                    output.preparing_m_order_time = None
+                    del output.firstOrders[0]
         # 寄っていない場合は終了
         if prev.is_preparing():
             if not crnt.is_preparing(): output.opening_tradingvalue = crnt.tradingValue
@@ -98,81 +97,40 @@ class Processor(object):
         if crnt.is_resting() and crnt.receivedTime.time() >= self.resting_time:
             value = (crnt.marketOrderBuyQty - prev.marketOrderBuyQty) * crnt.calcPrice
             if value > output.threshold:
-                output.resting_m_order_count += 1
-                if output.resting_m_order_time is None:
-                    output.resting_m_order_time = crnt.receivedTime
-            elif -1*value > output.threshold and output.resting_m_order_count > 0:
+                output.laterOrders.append(Order(crnt.receivedTime, value))
+            elif -1*value > output.threshold and len(output.laterOrders) > 0:
                 if crnt.askSign == prev.askSign and crnt.bidSign == prev.bidSign:
-                    output.resting_m_order_count -= 1
-                    output.resting_m_order_time = None
-        # 買約定後に売約定出るまで安値と高値を更新する
-        if output.buy_count >= self.buy_count and output.sell_count < self.sell_count:
-            if output.low_price > crnt.currentPrice:
-                output.low_price = crnt.currentPrice
-                output.low_price_time = crnt.receivedTime
-            if output.high_price < crnt.currentPrice:
-                output.high_price = crnt.currentPrice
-                output.high_price_time = crnt.receivedTime
-            vwap_diff = crnt.currentPrice - crnt.vwap
-            if output.low_vwap_diff > vwap_diff:
-                output.low_vwap_diff_time = crnt.receivedTime
-                output.low_vwap_diff_price = crnt.vwap
-                output.low_vwap_diff = vwap_diff
-            if output.high_vwap_diff < vwap_diff:
-                output.high_vwap_diff_time = crnt.receivedTime
-                output.high_vwap_diff_price = crnt.vwap
-                output.high_vwap_diff = vwap_diff
+                    del output.laterOrders[0]
+
         # 閾値で大約定を取得する
         value = crnt.tradingValue - prev.tradingValue
-        output.add_lastminutehistories(crnt.receivedTime, value)
+        self._addLastMinuteHistories(crnt.receivedTime, value)
+        # output.add_lastminutehistories(crnt.receivedTime, value)
         status = self._status(crnt, prev)
         if value >= output.threshold and status == "opening":
             sob = self._sellorbuy(crnt, prev)
             if sob > 0:
-                if output.sell_count < self.sell_count:
-                    output.buy_count += 1
-                else:
-                    output.buy_count_after += 1
-                if output.buy_count >= self.buy_count and output.buy_price is None:
-                    output.buy_price = crnt.currentPrice
-                    output.buy_prev_price = prev.currentPrice
-                    output.buy_time = crnt.currentPriceTime
-                    output.buy_vwap = crnt.vwap
-                    output.buy_low_price_time = crnt.lowPriceTime
-                    output.buy_low_price = crnt.lowPrice
-                    output.buy_high_price_time = crnt.highPriceTime
-                    output.buy_high_price = crnt.highPrice
-                    output.buy_status = self._status(crnt, prev)
-                    output.buy_tradingvalue = crnt.tradingValue
-                    output.set_buy_lastminute()
-                    if output.sell_count < self.sell_count:
-                        output.low_price = crnt.currentPrice
-                        output.low_price_time = crnt.receivedTime
-                        output.high_price = crnt.currentPrice
-                        output.high_price_time = crnt.receivedTime
-                        vwap_diff = crnt.currentPrice - crnt.vwap
-                        output.low_vwap_diff_time = crnt.receivedTime
-                        output.low_vwap_diff_price = crnt.vwap
-                        output.low_vwap_diff = vwap_diff
-                        output.high_vwap_diff_time = crnt.receivedTime
-                        output.high_vwap_diff_price = crnt.vwap
-                        output.high_vwap_diff = vwap_diff
+                output.buyContracts.append(Contract(
+                    thatTime=crnt.currentPriceTime,
+                    price=crnt.currentPrice,
+                    prevPrice=prev.currentPrice,
+                    vwap=crnt.vwap,
+                    tradingValue=value,
+                    tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),
+                    updateCountByMinute=len(self.lastMinuteHistories)
+                ))
+
             elif sob < 0:
-                if output.buy_count >= self.buy_count:
-                    output.sell_count += 1
-                else:
-                    output.sell_count_before += 1
-                    if output.sell_price_before is None:
-                        output.sell_price_before = crnt.currentPrice
-                        output.sell_time_before = crnt.receivedTime
-                if output.sell_count >= self.sell_count and output.sell_price is None:
-                    output.sell_price = crnt.currentPrice
-                    output.sell_prev_price = prev.currentPrice
-                    output.sell_time = crnt.currentPriceTime
-                    output.sell_vwap = crnt.vwap
-                    output.sell_status = self._status(crnt, prev)
-                    output.sell_tradingvalue = crnt.tradingValue
-                    output.set_sell_lastminute()
+                output.sellContracts.append(Contract(
+                    thatTime=crnt.currentPriceTime,
+                    price=crnt.currentPrice,
+                    prevPrice=prev.currentPrice,
+                    vwap=crnt.vwap,
+                    tradingValue=value,
+                    tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),
+                    updateCountByMinute=len(self.lastMinuteHistories)
+                ))
+
         return 0
 
     def run(self, lines: list[str]):
@@ -191,9 +149,13 @@ class Processor(object):
                 if self.thresholds:
                     output.threshold = self.thresholds[crnt.symbol]
                 else:
-                    threshold = self._calc_threshold(crnt.totalMarketValue)
-                    output.threshold = 50000000 if threshold > 50000000 else threshold
+                    output.threshold = self._calc_threshold(crnt.totalMarketValue)
             messages.append(crnt)
             self.process(messages, output)
         output.last_message = messages[-1]
         return output
+
+class TradingValueHistory(object):
+    def __init__(self, receivedtime: time, tradingvalue: int):
+        self.receivedtime: time = receivedtime
+        self.tradingvalue: int = tradingvalue
