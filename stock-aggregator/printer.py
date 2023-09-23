@@ -48,6 +48,8 @@ class ConsolePrinter(Printer):
             "当日高値",
             "当日終値",
             "当日売買代金",
+            "総買約定回数",
+            "総売約定回数",
         ]
         for i, item in enumerate(self.items):
             print(f"{str(i+1).rjust(2)}. {item}")
@@ -73,6 +75,8 @@ class ConsolePrinter(Printer):
                 Formater(output.last_message.highPrice).price().value,
                 Formater(output.last_message.currentPrice).price().value,
                 Formater(output.last_message.tradingValue).volume().value,
+                str(len(output.buyContracts)).rjust(2),
+                str(len(output.sellContracts)).rjust(2),
             ))
 
 
@@ -97,6 +101,8 @@ class CsvPrinter(Printer):
             "当日高値": [],
             "当日終値": [],
             "当日売買代金": [],
+            "総買約定回数": [],
+            "総売約定回数": [],
         }
         for i in range(1, 4):
             self.base[f"{i}:前場寄前注文時間"] = []
@@ -142,6 +148,8 @@ class CsvPrinter(Printer):
             data["当日高値"].append(output.last_message.highPrice)
             data["当日終値"].append(output.last_message.currentPrice)
             data["当日売買代金"].append(output.last_message.tradingValue)
+            data["総買約定回数"].append(len(output.buyContracts))
+            data["総売約定回数"].append(len(output.sellContracts))
             for i in range(1, 4):
                 flg = len(output.firstOrders) >= i
                 data[f"{i}:前場寄前注文時間"].append(output.firstOrders[i-1].thatTime.time() if flg else None)
