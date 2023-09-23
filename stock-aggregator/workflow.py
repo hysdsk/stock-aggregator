@@ -15,8 +15,7 @@ class Workflow(object):
             return []
         symbols = [f for f in files if pattern_json.match(f)]
         symbols = [s for s in symbols if s.replace(".json", "") not in ["101", "151", "154"]]
-        if self.thresholds:
-            symbols = [s for s in symbols if s.replace(".json", "") in self.thresholds]
+        symbols = [s for s in symbols if self.thresholds is None or s.replace(".json", "") in self.thresholds]
         return symbols
 
     def _read_file(self, filename: str) -> list[str]:

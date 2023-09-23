@@ -67,14 +67,16 @@ class Processor(object):
     def _calc_threshold(self, totalMarketValue: float) -> float:
         if not totalMarketValue:
             return 30000000
-        if totalMarketValue >=  65 * (10**9): return round(totalMarketValue * 0.00033)
-        if totalMarketValue >=  60 * (10**9): return 20*(10**6)
-        if totalMarketValue >=  50 * (10**9): return 19*(10**6)
-        if totalMarketValue >=  40 * (10**9): return 18*(10**6)
-        if totalMarketValue >=  30 * (10**9): return 17*(10**6)
-        if totalMarketValue >=  20 * (10**9): return 16*(10**6)
-        if totalMarketValue >=  10 * (10**9): return 15*(10**6)
-        return 10000000
+        if totalMarketValue >=  90 * (10**9): return round(totalMarketValue * 0.00051)
+        if totalMarketValue >=  80 * (10**9): return 40*(10**6)
+        if totalMarketValue >=  70 * (10**9): return 36*(10**6)
+        if totalMarketValue >=  60 * (10**9): return 32*(10**6)
+        if totalMarketValue >=  50 * (10**9): return 29*(10**6)
+        if totalMarketValue >=  40 * (10**9): return 28*(10**6)
+        if totalMarketValue >=  30 * (10**9): return 26*(10**6)
+        if totalMarketValue >=  20 * (10**9): return 24*(10**6)
+        if totalMarketValue >=  10 * (10**9): return 22*(10**6)
+        return                                       20*(10**6)
 
     def process(self, messages: list[Message], output: Output) -> int:
         crnt = messages[-1]
