@@ -64,24 +64,36 @@ class Processor(object):
             # ザラ場通常時
             return "opening"
 
+    # def _calc_threshold(self, totalMarketValue: float) -> float:
+    #     if not totalMarketValue:
+    #         return 30000000
+    #     if totalMarketValue >=  90 * (10**9): return round(totalMarketValue * 0.00051)
+    #     if totalMarketValue >=  80 * (10**9): return 40*(10**6)
+    #     if totalMarketValue >=  70 * (10**9): return 36*(10**6)
+    #     if totalMarketValue >=  60 * (10**9): return 32*(10**6)
+    #     if totalMarketValue >=  50 * (10**9): return 29*(10**6)
+    #     if totalMarketValue >=  40 * (10**9): return 28*(10**6)
+    #     if totalMarketValue >=  30 * (10**9): return 26*(10**6)
+    #     if totalMarketValue >=  20 * (10**9): return 24*(10**6)
+    #     if totalMarketValue >=  10 * (10**9): return 22*(10**6)
+    #     return                                       20*(10**6)
+
     def _calc_threshold(self, totalMarketValue: float) -> float:
         if not totalMarketValue:
             return 30000000
-        if totalMarketValue >=  90 * (10**9): return round(totalMarketValue * 0.00051)
-        if totalMarketValue >=  80 * (10**9): return 40*(10**6)
-        if totalMarketValue >=  70 * (10**9): return 36*(10**6)
-        if totalMarketValue >=  60 * (10**9): return 32*(10**6)
-        if totalMarketValue >=  50 * (10**9): return 29*(10**6)
-        if totalMarketValue >=  40 * (10**9): return 28*(10**6)
-        if totalMarketValue >=  30 * (10**9): return 26*(10**6)
-        if totalMarketValue >=  20 * (10**9): return 24*(10**6)
-        if totalMarketValue >=  10 * (10**9): return 22*(10**6)
-        return                                       20*(10**6)
+        if totalMarketValue >=  65 * (10**9): return round(totalMarketValue * 0.00033)
+        if totalMarketValue >=  60 * (10**9): return 20*(10**6)
+        if totalMarketValue >=  50 * (10**9): return 19*(10**6)
+        if totalMarketValue >=  40 * (10**9): return 18*(10**6)
+        if totalMarketValue >=  30 * (10**9): return 17*(10**6)
+        if totalMarketValue >=  20 * (10**9): return 16*(10**6)
+        if totalMarketValue >=  10 * (10**9): return 15*(10**6)
+        return 10000000
 
     def process(self, messages: list[Message], output: Output) -> int:
         crnt = messages[-1]
         if len(messages) < 2:
-            return 0
+            return
         prev = messages[-2]
         # 前場寄り前
         if crnt.is_preparing() and crnt.receivedTime.time() >= self.preparing_time:
@@ -94,7 +106,7 @@ class Processor(object):
         # 寄っていない場合は終了
         if prev.is_preparing():
             if not crnt.is_preparing(): output.opening_tradingvalue = crnt.tradingValue
-            return 0
+            return
         # 後場寄り前
         if crnt.is_resting() and crnt.receivedTime.time() >= self.resting_time:
             value = (crnt.marketOrderBuyQty - prev.marketOrderBuyQty) * crnt.calcPrice
@@ -103,11 +115,12 @@ class Processor(object):
             elif -1*value > output.threshold and len(output.laterOrders) > 0:
                 if crnt.askSign == prev.askSign and crnt.bidSign == prev.bidSign:
                     del output.laterOrders[0]
-
+        # 買約定後の安値と高値を更新する
+        for buyContract in output.buyContracts:
+            buyContract.updateHighAndLow(crnt)
         # 閾値で大約定を取得する
         value = crnt.tradingValue - prev.tradingValue
         self._addLastMinuteHistories(crnt.receivedTime, value)
-        # output.add_lastminutehistories(crnt.receivedTime, value)
         status = self._status(crnt, prev)
         if value >= output.threshold and status == "opening":
             sob = self._sellorbuy(crnt, prev)
@@ -121,7 +134,6 @@ class Processor(object):
                     tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),
                     updateCountByMinute=len(self.lastMinuteHistories)
                 ))
-
             elif sob < 0:
                 output.sellContracts.append(Contract(
                     thatTime=crnt.currentPriceTime,
@@ -132,8 +144,6 @@ class Processor(object):
                     tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),
                     updateCountByMinute=len(self.lastMinuteHistories)
                 ))
-
-        return 0
 
     def run(self, lines: list[str]):
         messages: list[Message] = []
@@ -148,10 +158,7 @@ class Processor(object):
                 continue
             if output.opening_totalmarketvalue is None:
                 output.opening_totalmarketvalue = crnt.totalMarketValue
-                if self.thresholds:
-                    output.threshold = self.thresholds[crnt.symbol]
-                else:
-                    output.threshold = self._calc_threshold(crnt.totalMarketValue)
+                output.threshold = self.thresholds[crnt.symbol] if self.thresholds else self._calc_threshold(crnt.totalMarketValue)
             messages.append(crnt)
             self.process(messages, output)
         output.last_message = messages[-1]
