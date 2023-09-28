@@ -1,5 +1,6 @@
 import os
 import re
+from multiprocessing import Pool, cpu_count
 from .processor import Processor
 from .output import Output
 
@@ -25,9 +26,8 @@ class Workflow(object):
     def run(self, dirName: str, offset_minute: int) -> list[Output]:
         outputs: list[Output] = []
         files = self._findFiles(dirName)
-        for file in files:
-            lines = self._readFile(file)
-            proccesor: Processor = Processor(offset_minute, self.thresholds)
-            output = proccesor.run(lines)
-            outputs.append(output)
+        processor: Processor = Processor(offset_minute, self.thresholds)
+        with Pool(processes=cpu_count()) as pool:
+            results = pool.starmap_async(processor.run, [(self._readFile(file),) for file in files])
+            outputs.extend(results.get())
         return outputs
