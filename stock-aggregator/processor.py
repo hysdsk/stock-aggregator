@@ -29,9 +29,9 @@ class Processor(object):
                 return -1
             if crnt.currentPrice > prevprice:
                 return 1
-            if prev.askPrice and prevprice <= prev.askPrice:
+            if prev.askPrice and crnt.currentPrice <= prev.askPrice:
                 return -1
-            if prev.bidPrice and prevprice >= prev.bidPrice:
+            if prev.bidPrice and crnt.currentPrice >= prev.bidPrice:
                 return 1
         return 0
 
@@ -154,7 +154,7 @@ class Processor(object):
                         updateCountByMinute=len(self.lastMinuteHistories)
                     ))
 
-    def run(self, lines: list[str]):
+    def run(self, lines: list[str]) -> Output:
         messages: list[Message] = []
         output = Output()
         for line in lines:
