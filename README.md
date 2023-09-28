@@ -11,7 +11,7 @@ auカブコム証券のKabuステーションAPIを利用して受信したテ�
 | DEFAULT | target_filename | str | 集計対象銘柄リストのCSVファイル名を設定する。 |
 
 ``` ini
-[Section]1695525385.csv
+[Section]
 Key = Value
 .
 .
