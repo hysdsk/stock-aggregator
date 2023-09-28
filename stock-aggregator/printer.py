@@ -42,14 +42,14 @@ class ConsolePrinter(Printer):
             "寄付時間",
             "寄付価格",
             "寄時売買代金",
-            "当日安値時間",
-            "当日安値",
             "当日高値時間",
             "当日高値",
+            "当日安値時間",
+            "当日安値",
             "当日終値",
             "当日売買代金",
-            "買約定回数",
-            "売約定回数",
+            "買大約定回数",
+            "売大約定回数",
         ]
         for i, item in enumerate(self.items):
             print(f"{str(i+1).rjust(2)}. {item}")
@@ -69,10 +69,10 @@ class ConsolePrinter(Printer):
                 Formater(output.last_message.openingPriceTime).time().value,
                 Formater(output.last_message.openingPrice).price().green().value,
                 Formater(output.opening_tradingvalue).volume().value,
-                Formater(output.last_message.lowPriceTime).time().value,
-                Formater(output.last_message.lowPrice).price().value,
                 Formater(output.last_message.highPriceTime).time().value,
                 Formater(output.last_message.highPrice).price().value,
+                Formater(output.last_message.lowPriceTime).time().value,
+                Formater(output.last_message.lowPrice).price().value,
                 Formater(output.last_message.currentPrice).price().value,
                 Formater(output.last_message.tradingValue).volume().value,
                 str(len(output.buyContracts)).rjust(2),
@@ -95,14 +95,20 @@ class CsvPrinter(Printer):
             "寄付時間": [],
             "寄付価格": [],
             "寄時売買代金": [],
-            "当日安値時間": [],
-            "当日安値": [],
             "当日高値時間": [],
             "当日高値": [],
+            "当日安値時間": [],
+            "当日安値": [],
             "当日終値": [],
             "当日売買代金": [],
-            "買約定回数": [],
-            "売約定回数": [],
+            "買大約定回数": [],
+            "買大約定代金": [],
+            "売大約定回数": [],
+            "売大約定代金": [],
+            "総買約定回数": [],
+            "総買約定代金": [],
+            "総売約定回数": [],
+            "総売約定代金": [],
         }
         for i in range(1, 4):
             self.base[f"{i}:前場寄前注文時間"] = []
@@ -118,6 +124,10 @@ class CsvPrinter(Printer):
             self.base[f"{i}:買時売買代金"] = []
             self.base[f"{i}:買時売買代金一分"] = []
             self.base[f"{i}:買時板更新数一分"] = []
+            self.base[f"{i}:買後高値時間"] = []
+            self.base[f"{i}:買後高値"] = []
+            self.base[f"{i}:買後安値時間"] = []
+            self.base[f"{i}:買後安値"] = []
         for i in range(1, 10):
             self.base[f"{i}:売約定時間"] = []
             self.base[f"{i}:売約定価格"] = []
@@ -129,8 +139,8 @@ class CsvPrinter(Printer):
         pd.DataFrame(self.base).to_csv(csvname, index=False)
 
     def out(self, outputs: list[Output]):
-        data = copy.deepcopy(self.base)
         for output in outputs:
+            data = copy.deepcopy(self.base)
             if output.last_message.is_preparing(): return
             data["日付"].append(output.last_message.receivedTime.strftime("%Y/%m/%d"))
             data["曜日"].append(self.get_jp_week(output.last_message.receivedTime))
@@ -142,14 +152,20 @@ class CsvPrinter(Printer):
             data["寄付時間"].append(Formater(output.last_message.openingPriceTime).time().value)
             data["寄付価格"].append(output.last_message.openingPrice)
             data["寄時売買代金"].append(output.opening_tradingvalue)
-            data["当日安値時間"].append(Formater(output.last_message.lowPriceTime).time().value)
-            data["当日安値"].append(output.last_message.lowPrice)
             data["当日高値時間"].append(Formater(output.last_message.highPriceTime).time().value)
             data["当日高値"].append(output.last_message.highPrice)
+            data["当日安値時間"].append(Formater(output.last_message.lowPriceTime).time().value)
+            data["当日安値"].append(output.last_message.lowPrice)
             data["当日終値"].append(output.last_message.currentPrice)
             data["当日売買代金"].append(output.last_message.tradingValue)
-            data["買約定回数"].append(len(output.buyContracts))
-            data["売約定回数"].append(len(output.sellContracts))
+            data["買大約定回数"].append(len(output.buyContracts))
+            data["買大約定代金"].append(sum([b.tradingValue for b in output.buyContracts]))
+            data["売大約定回数"].append(len(output.sellContracts))
+            data["売大約定代金"].append(sum([s.tradingValue for s in output.sellContracts]))
+            data["総買約定回数"].append(output.totalBuyCount)
+            data["総買約定代金"].append(output.totalBuyValue)
+            data["総売約定回数"].append(output.totalSellCount)
+            data["総売約定代金"].append(output.totalSellValue)
             for i in range(1, 4):
                 flg = len(output.firstOrders) >= i
                 data[f"{i}:前場寄前注文時間"].append(output.firstOrders[i-1].thatTime.time() if flg else None)
@@ -167,6 +183,10 @@ class CsvPrinter(Printer):
                 data[f"{i}:買時売買代金"].append(output.buyContracts[i-1].tradingValue if flg else None)
                 data[f"{i}:買時売買代金一分"].append(output.buyContracts[i-1].tradingValueByMinute if flg else None)
                 data[f"{i}:買時板更新数一分"].append(output.buyContracts[i-1].updateCountByMinute if flg else None)
+                data[f"{i}:買後高値時間"].append(output.buyContracts[i-1].highPriceTime.replace(microsecond=0).time() if flg else None)
+                data[f"{i}:買後高値"].append(output.buyContracts[i-1].highPrice if flg else None)
+                data[f"{i}:買後安値時間"].append(output.buyContracts[i-1].lowPriceTime.replace(microsecond=0).time() if flg else None)
+                data[f"{i}:買後安値"].append(output.buyContracts[i-1].lowPrice if flg else None)
             for i in range(1, 10):
                 flg = len(output.sellContracts) >= i
                 data[f"{i}:売約定時間"].append(output.sellContracts[i-1].thatTime.time() if flg else None)
@@ -176,4 +196,4 @@ class CsvPrinter(Printer):
                 data[f"{i}:売時売買代金"].append(output.sellContracts[i-1].tradingValue if flg else None)
                 data[f"{i}:売時売買代金一分"].append(output.sellContracts[i-1].tradingValueByMinute if flg else None)
                 data[f"{i}:売時板更新数一分"].append(output.sellContracts[i-1].updateCountByMinute if flg else None)
-        pd.DataFrame(data).to_csv(self.csvname, index=False, header=False, mode="a")
+            pd.DataFrame(data).to_csv(self.csvname, index=False, header=False, mode="a")
