@@ -122,28 +122,37 @@ class Processor(object):
         value = crnt.tradingValue - prev.tradingValue
         self._addLastMinuteHistories(crnt.receivedTime, value)
         status = self._status(crnt, prev)
-        if value >= output.threshold and status == "opening":
+        if value > 0 and status == "opening":
             sob = self._sellorbuy(crnt, prev)
+            # 通常約定
             if sob > 0:
-                output.buyContracts.append(Contract(
-                    thatTime=crnt.currentPriceTime,
-                    price=crnt.currentPrice,
-                    prevPrice=prev.currentPrice,
-                    vwap=crnt.vwap,
-                    tradingValue=value,
-                    tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),
-                    updateCountByMinute=len(self.lastMinuteHistories)
-                ))
+                output.totalBuyCount += 1
+                output.totalBuyValue += value
             elif sob < 0:
-                output.sellContracts.append(Contract(
-                    thatTime=crnt.currentPriceTime,
-                    price=crnt.currentPrice,
-                    prevPrice=prev.currentPrice,
-                    vwap=crnt.vwap,
-                    tradingValue=value,
-                    tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),
-                    updateCountByMinute=len(self.lastMinuteHistories)
-                ))
+                output.totalSellCount += 1
+                output.totalSellValue += value
+            # 大約定
+            if value >= output.threshold:
+                if sob > 0:
+                    output.buyContracts.append(Contract(
+                        thatTime=crnt.currentPriceTime,
+                        price=crnt.currentPrice,
+                        prevPrice=prev.currentPrice,
+                        vwap=crnt.vwap,
+                        tradingValue=value,
+                        tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),
+                        updateCountByMinute=len(self.lastMinuteHistories)
+                    ))
+                elif sob < 0:
+                    output.sellContracts.append(Contract(
+                        thatTime=crnt.currentPriceTime,
+                        price=crnt.currentPrice,
+                        prevPrice=prev.currentPrice,
+                        vwap=crnt.vwap,
+                        tradingValue=value,
+                        tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),
+                        updateCountByMinute=len(self.lastMinuteHistories)
+                    ))
 
     def run(self, lines: list[str]):
         messages: list[Message] = []

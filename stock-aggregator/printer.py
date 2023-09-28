@@ -48,8 +48,8 @@ class ConsolePrinter(Printer):
             "当日安値",
             "当日終値",
             "当日売買代金",
-            "買約定回数",
-            "売約定回数",
+            "買大約定回数",
+            "売大約定回数",
         ]
         for i, item in enumerate(self.items):
             print(f"{str(i+1).rjust(2)}. {item}")
@@ -101,8 +101,14 @@ class CsvPrinter(Printer):
             "当日安値": [],
             "当日終値": [],
             "当日売買代金": [],
-            "買約定回数": [],
-            "売約定回数": [],
+            "買大約定回数": [],
+            "買大約定代金": [],
+            "売大約定回数": [],
+            "売大約定代金": [],
+            "総買約定回数": [],
+            "総買約定代金": [],
+            "総売約定回数": [],
+            "総売約定代金": [],
         }
         for i in range(1, 4):
             self.base[f"{i}:前場寄前注文時間"] = []
@@ -152,8 +158,14 @@ class CsvPrinter(Printer):
             data["当日安値"].append(output.last_message.lowPrice)
             data["当日終値"].append(output.last_message.currentPrice)
             data["当日売買代金"].append(output.last_message.tradingValue)
-            data["買約定回数"].append(len(output.buyContracts))
-            data["売約定回数"].append(len(output.sellContracts))
+            data["買大約定回数"].append(len(output.buyContracts))
+            data["買大約定代金"].append(sum([b.tradingValue for b in output.buyContracts]))
+            data["売大約定回数"].append(len(output.sellContracts))
+            data["売大約定代金"].append(sum([s.tradingValue for s in output.sellContracts]))
+            data["総買約定回数"].append(output.totalBuyCount)
+            data["総買約定代金"].append(output.totalBuyValue)
+            data["総売約定回数"].append(output.totalSellCount)
+            data["総売約定代金"].append(output.totalSellValue)
             for i in range(1, 4):
                 flg = len(output.firstOrders) >= i
                 data[f"{i}:前場寄前注文時間"].append(output.firstOrders[i-1].thatTime.time() if flg else None)
