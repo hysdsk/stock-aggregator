@@ -102,9 +102,9 @@ class CsvPrinter(Printer):
             "当日終値": [],
             "当日売買代金": [],
             "買大約定回数": [],
-            "買大約定代金": [],
+            "買大約定平均代金": [],
             "売大約定回数": [],
-            "売大約定代金": [],
+            "売大約定平均代金": [],
             "総買約定回数": [],
             "総買約定代金": [],
             "総売約定回数": [],
@@ -120,6 +120,8 @@ class CsvPrinter(Printer):
             self.base[f"{i}:買約定時間"] = []
             self.base[f"{i}:買約定価格"] = []
             self.base[f"{i}:買約定直前価格"] = []
+            self.base[f"{i}:買約定高値"] = []
+            self.base[f"{i}:買約定安値"] = []
             self.base[f"{i}:買時VWAP"] = []
             self.base[f"{i}:買時売買代金"] = []
             self.base[f"{i}:買時売買代金一分"] = []
@@ -132,6 +134,8 @@ class CsvPrinter(Printer):
             self.base[f"{i}:売約定時間"] = []
             self.base[f"{i}:売約定価格"] = []
             self.base[f"{i}:売約定直前価格"] = []
+            self.base[f"{i}:売約定高値"] = []
+            self.base[f"{i}:売約定安値"] = []
             self.base[f"{i}:売時VWAP"] = []
             self.base[f"{i}:売時売買代金"] = []
             self.base[f"{i}:売時売買代金一分"] = []
@@ -159,9 +163,9 @@ class CsvPrinter(Printer):
             data["当日終値"].append(output.last_message.currentPrice)
             data["当日売買代金"].append(output.last_message.tradingValue)
             data["買大約定回数"].append(len(output.buyContracts))
-            data["買大約定代金"].append(sum([b.tradingValue for b in output.buyContracts]))
+            data["買大約定平均代金"].append(round(sum([b.tradingValue for b in output.buyContracts])/len(output.buyContracts)) if len(output.buyContracts) > 0 else 0)
             data["売大約定回数"].append(len(output.sellContracts))
-            data["売大約定代金"].append(sum([s.tradingValue for s in output.sellContracts]))
+            data["売大約定平均代金"].append(round(sum([s.tradingValue for s in output.sellContracts])/len(output.sellContracts)) if len(output.sellContracts) > 0 else 0)
             data["総買約定回数"].append(output.totalBuyCount)
             data["総買約定代金"].append(output.totalBuyValue)
             data["総売約定回数"].append(output.totalSellCount)
@@ -179,19 +183,23 @@ class CsvPrinter(Printer):
                 data[f"{i}:買約定時間"].append(output.buyContracts[i-1].thatTime.time() if flg else None)
                 data[f"{i}:買約定価格"].append(output.buyContracts[i-1].price if flg else None)
                 data[f"{i}:買約定直前価格"].append(output.buyContracts[i-1].prevPrice if flg else None)
+                data[f"{i}:買約定高値"].append(output.buyContracts[i-1].highPrice if flg else None)
+                data[f"{i}:買約定安値"].append(output.buyContracts[i-1].lowPrice if flg else None)
                 data[f"{i}:買時VWAP"].append(output.buyContracts[i-1].vwap if flg else None)
                 data[f"{i}:買時売買代金"].append(output.buyContracts[i-1].tradingValue if flg else None)
                 data[f"{i}:買時売買代金一分"].append(output.buyContracts[i-1].tradingValueByMinute if flg else None)
                 data[f"{i}:買時板更新数一分"].append(output.buyContracts[i-1].updateCountByMinute if flg else None)
-                data[f"{i}:買後高値時間"].append(output.buyContracts[i-1].highPriceTime.replace(microsecond=0).time() if flg else None)
-                data[f"{i}:買後高値"].append(output.buyContracts[i-1].highPrice if flg else None)
-                data[f"{i}:買後安値時間"].append(output.buyContracts[i-1].lowPriceTime.replace(microsecond=0).time() if flg else None)
-                data[f"{i}:買後安値"].append(output.buyContracts[i-1].lowPrice if flg else None)
+                data[f"{i}:買後高値時間"].append(output.buyContracts[i-1].highPriceAfterTime.replace(microsecond=0).time() if flg else None)
+                data[f"{i}:買後高値"].append(output.buyContracts[i-1].highPriceAfter if flg else None)
+                data[f"{i}:買後安値時間"].append(output.buyContracts[i-1].lowPriceAfterTime.replace(microsecond=0).time() if flg else None)
+                data[f"{i}:買後安値"].append(output.buyContracts[i-1].lowPriceAfter if flg else None)
             for i in range(1, 10):
                 flg = len(output.sellContracts) >= i
                 data[f"{i}:売約定時間"].append(output.sellContracts[i-1].thatTime.time() if flg else None)
                 data[f"{i}:売約定価格"].append(output.sellContracts[i-1].price if flg else None)
                 data[f"{i}:売約定直前価格"].append(output.sellContracts[i-1].prevPrice if flg else None)
+                data[f"{i}:売約定高値"].append(output.sellContracts[i-1].highPrice if flg else None)
+                data[f"{i}:売約定安値"].append(output.sellContracts[i-1].lowPrice if flg else None)
                 data[f"{i}:売時VWAP"].append(output.sellContracts[i-1].vwap if flg else None)
                 data[f"{i}:売時売買代金"].append(output.sellContracts[i-1].tradingValue if flg else None)
                 data[f"{i}:売時売買代金一分"].append(output.sellContracts[i-1].tradingValueByMinute if flg else None)
