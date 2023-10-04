@@ -52,6 +52,10 @@ class Output(object):
         self.last_message = None
         self.threshold = None
         self.opening_totalmarketvalue = None
+        self.openingMarketOrderBuyQty = None
+        self.openingMarketOrderSellQty = None
+        self.openingLimitOrderBuyQty = None
+        self.openingLimitOrderSellQty = None
         self.totalBuyCount = 0
         self.totalBuyValue = 0
         self.totalSellCount = 0

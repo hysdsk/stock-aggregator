@@ -42,6 +42,10 @@ class ConsolePrinter(Printer):
             "寄付時間": [],
             "寄付価格": [],
             "寄時売買代金": [],
+            "寄時成行買注文数": [],
+            "寄時成行売注文数": [],
+            "寄時指値買注文数": [],
+            "寄時指値売注文数": [],
             "当日高値時間": [],
             "当日高値": [],
             "当日安値時間": [],
@@ -72,6 +76,10 @@ class ConsolePrinter(Printer):
             data["寄付時間"].append(Formater(output.last_message.openingPriceTime).time().value)
             data["寄付価格"].append(Formater(output.last_message.openingPrice).price().green().value)
             data["寄時売買代金"].append(Formater(output.opening_tradingvalue).volume().value)
+            data["寄時成行買注文数"].append(Formater(output.openingMarketOrderBuyQty).volume().value)
+            data["寄時成行売注文数"].append(Formater(output.openingMarketOrderSellQty).volume().value)
+            data["寄時指値買注文数"].append(Formater(output.openingLimitOrderBuyQty).volume().value)
+            data["寄時指値売注文数"].append(Formater(output.openingLimitOrderSellQty).volume().value)
             data["当日高値時間"].append(Formater(output.last_message.highPriceTime).time().value)
             data["当日高値"].append(Formater(output.last_message.highPrice).price().value)
             data["当日安値時間"].append(Formater(output.last_message.lowPriceTime).time().value)
@@ -104,6 +112,10 @@ class CsvPrinter(Printer):
             "寄付時間": [],
             "寄付価格": [],
             "寄時売買代金": [],
+            "寄時成行買注文数": [],
+            "寄時成行売注文数": [],
+            "寄時指値買注文数": [],
+            "寄時指値売注文数": [],
             "当日高値時間": [],
             "当日高値": [],
             "当日安値時間": [],
@@ -165,6 +177,10 @@ class CsvPrinter(Printer):
             data["寄付時間"].append(Formater(output.last_message.openingPriceTime).time().value)
             data["寄付価格"].append(output.last_message.openingPrice)
             data["寄時売買代金"].append(output.opening_tradingvalue)
+            data["寄時成行買注文数"].append(output.openingMarketOrderBuyQty)
+            data["寄時成行売注文数"].append(output.openingMarketOrderSellQty)
+            data["寄時指値買注文数"].append(output.openingLimitOrderBuyQty)
+            data["寄時指値売注文数"].append(output.openingLimitOrderSellQty)
             data["当日高値時間"].append(Formater(output.last_message.highPriceTime).time().value)
             data["当日高値"].append(output.last_message.highPrice)
             data["当日安値時間"].append(Formater(output.last_message.lowPriceTime).time().value)
