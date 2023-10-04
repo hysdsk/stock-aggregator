@@ -31,53 +31,62 @@ class Printer(ABC):
 class ConsolePrinter(Printer):
     def __init__(self):
         super().__init__()
-        self.items = [
-            "日付",
-            "曜日",
-            "銘柄コード",
-            "銘柄名",
-            "閾値",
-            "前日終値",
-            "前日時価総額",
-            "寄付時間",
-            "寄付価格",
-            "寄時売買代金",
-            "当日高値時間",
-            "当日高値",
-            "当日安値時間",
-            "当日安値",
-            "当日終値",
-            "当日売買代金",
-            "買大約定回数",
-            "売大約定回数",
-        ]
-        for i, item in enumerate(self.items):
-            print(f"{str(i+1).rjust(2)}. {item}")
+        self.items = {
+            "日付": [],
+            "曜日": [],
+            "銘柄コード": [],
+            "銘柄名": [],
+            "閾値": [],
+            "前日終値": [],
+            "前日時価総額": [],
+            "寄付時間": [],
+            "寄付価格": [],
+            "寄時売買代金": [],
+            "当日高値時間": [],
+            "当日高値": [],
+            "当日安値時間": [],
+            "当日安値": [],
+            "当日終値": [],
+            "当日売買代金": [],
+            "買大約定回数": [],
+            "買大約定平均代金": [],
+            "売大約定回数": [],
+            "売大約定平均代金": [],
+            "総買約定回数": [],
+            "総買約定代金": [],
+            "総売約定回数": [],
+            "総売約定代金": [],
+        }
 
     def out(self, outputs: list[Output]):
+        data = copy.deepcopy(self.items)
         for output in outputs:
             if output.last_message.is_preparing(): return
-            template = " ".join(["{}"]*len(self.items))
-            print(template.format(
-                output.last_message.receivedTime.strftime("%Y/%m/%d"),
-                self.get_jp_week(output.last_message.receivedTime),
-                output.last_message.symbol,
-                Formater(output.last_message.symbolName).sname().value,
-                Formater(output.threshold).volume().value,
-                Formater(output.last_message.previousClose).price().gray().value,
-                Formater(output.opening_totalmarketvalue).volume().value,
-                Formater(output.last_message.openingPriceTime).time().value,
-                Formater(output.last_message.openingPrice).price().green().value,
-                Formater(output.opening_tradingvalue).volume().value,
-                Formater(output.last_message.highPriceTime).time().value,
-                Formater(output.last_message.highPrice).price().value,
-                Formater(output.last_message.lowPriceTime).time().value,
-                Formater(output.last_message.lowPrice).price().value,
-                Formater(output.last_message.currentPrice).price().value,
-                Formater(output.last_message.tradingValue).volume().value,
-                str(len(output.buyContracts)).rjust(2),
-                str(len(output.sellContracts)).rjust(2),
-            ))
+            data["日付"].append(output.last_message.receivedTime.strftime("%Y/%m/%d"))
+            data["曜日"].append(self.get_jp_week(output.last_message.receivedTime))
+            data["銘柄コード"].append(output.last_message.symbol)
+            data["銘柄名"].append(Formater(output.last_message.symbolName).sname().value)
+            data["閾値"].append(Formater(output.threshold).volume().value)
+            data["前日終値"].append(Formater(output.last_message.previousClose).price().gray().value)
+            data["前日時価総額"].append(Formater(output.opening_totalmarketvalue).volume().value)
+            data["寄付時間"].append(Formater(output.last_message.openingPriceTime).time().value)
+            data["寄付価格"].append(Formater(output.last_message.openingPrice).price().green().value)
+            data["寄時売買代金"].append(Formater(output.opening_tradingvalue).volume().value)
+            data["当日高値時間"].append(Formater(output.last_message.highPriceTime).time().value)
+            data["当日高値"].append(Formater(output.last_message.highPrice).price().value)
+            data["当日安値時間"].append(Formater(output.last_message.lowPriceTime).time().value)
+            data["当日安値"].append(Formater(output.last_message.lowPrice).price().value)
+            data["当日終値"].append(Formater(output.last_message.currentPrice).price().value)
+            data["当日売買代金"].append(Formater(output.last_message.tradingValue).volume().value)
+            data["買大約定回数"].append(len(output.buyContracts))
+            data["買大約定平均代金"].append(Formater(round(sum([b.tradingValue for b in output.buyContracts])/len(output.buyContracts)) if len(output.buyContracts) > 0 else 0).volume().value)
+            data["売大約定回数"].append(len(output.sellContracts))
+            data["売大約定平均代金"].append(Formater(round(sum([s.tradingValue for s in output.sellContracts])/len(output.sellContracts)) if len(output.sellContracts) > 0 else 0).volume().value)
+            data["総買約定回数"].append(output.totalBuyCount)
+            data["総買約定代金"].append(Formater(output.totalBuyValue).volume().value)
+            data["総売約定回数"].append(output.totalSellCount)
+            data["総売約定代金"].append(Formater(output.totalSellValue).volume().value)
+        print(pd.DataFrame(data))
 
 
 class CsvPrinter(Printer):
