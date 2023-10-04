@@ -95,6 +95,7 @@ class Processor(object):
         if len(messages) < 2:
             return
         prev = messages[-2]
+        status = self._status(crnt, prev)
         # 前場寄り前
         if crnt.is_preparing() and crnt.receivedTime.time() >= self.preparing_time:
             value = (crnt.marketOrderBuyQty - prev.marketOrderBuyQty) * crnt.calcPrice
@@ -105,7 +106,12 @@ class Processor(object):
                     del output.firstOrders[0]
         # 寄っていない場合は終了
         if prev.is_preparing():
-            if not crnt.is_preparing(): output.opening_tradingvalue = crnt.tradingValue
+            if status == "nowopened":
+                output.opening_tradingvalue = crnt.tradingValue
+                output.openingMarketOrderBuyQty = prev.marketOrderBuyQty
+                output.openingMarketOrderSellQty = prev.marketOrderSellQty
+                output.openingLimitOrderBuyQty = sum([buy.qty for buy in prev.buys])
+                output.openingLimitOrderSellQty = sum([sell.qty for sell in prev.sells])
             return
         # 後場寄り前
         if crnt.is_resting() and crnt.receivedTime.time() >= self.resting_time:
@@ -121,7 +127,6 @@ class Processor(object):
         # 閾値で大約定を取得する
         value = crnt.tradingValue - prev.tradingValue
         self._addLastMinuteHistories(crnt.receivedTime, value)
-        status = self._status(crnt, prev)
         if value > 0 and status == "opening":
             sob = self._sellorbuy(crnt, prev)
             # 通常約定
@@ -138,6 +143,8 @@ class Processor(object):
                         thatTime=crnt.currentPriceTime,
                         price=crnt.currentPrice,
                         prevPrice=prev.currentPrice,
+                        highPrice=prev.highPrice,
+                        lowPrice=prev.lowPrice,
                         vwap=crnt.vwap,
                         tradingValue=value,
                         tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),
@@ -148,6 +155,8 @@ class Processor(object):
                         thatTime=crnt.currentPriceTime,
                         price=crnt.currentPrice,
                         prevPrice=prev.currentPrice,
+                        highPrice=prev.highPrice,
+                        lowPrice=prev.lowPrice,
                         vwap=crnt.vwap,
                         tradingValue=value,
                         tradingValueByMinute=sum([h.tradingvalue for h in self.lastMinuteHistories]),

@@ -6,6 +6,8 @@ class Contract(object):
                 thatTime,
                 price,
                 prevPrice,
+                highPrice,
+                lowPrice,
                 vwap,
                 tradingValue,
                 tradingValueByMinute,
@@ -13,21 +15,23 @@ class Contract(object):
         self.thatTime: datetime = thatTime
         self.price = price
         self.prevPrice = prevPrice
+        self.highPrice = highPrice
+        self.lowPrice = lowPrice
         self.vwap = vwap
         self.tradingValue = tradingValue
         self.tradingValueByMinute = tradingValueByMinute
         self.updateCountByMinute = updateCountByMinute
-        self.lowPriceTime: datetime = thatTime
-        self.lowPrice = price
-        self.highPriceTime: datetime = thatTime
-        self.highPrice = price
+        self.highPriceAfterTime: datetime = thatTime
+        self.highPriceAfter = price
+        self.lowPriceAfterTime: datetime = thatTime
+        self.lowPriceAfter = price
     def updateHighAndLow(self, crnt: Message):
-        if self.highPrice < crnt.currentPrice:
-            self.highPrice = crnt.currentPrice
-            self.highPriceTime = crnt.receivedTime
-        if self.lowPrice > crnt.currentPrice:
-            self.lowPrice = crnt.currentPrice
-            self.lowPriceTime = crnt.receivedTime
+        if self.highPriceAfter < crnt.currentPrice:
+            self.highPriceAfter = crnt.currentPrice
+            self.highPriceAfterTime = crnt.receivedTime
+        if self.lowPriceAfter > crnt.currentPrice:
+            self.lowPriceAfter = crnt.currentPrice
+            self.lowPriceAfterTime = crnt.receivedTime
 
 class Order(object):
     def __init__(self, thatTime, orderValue) -> None:
@@ -48,6 +52,10 @@ class Output(object):
         self.last_message = None
         self.threshold = None
         self.opening_totalmarketvalue = None
+        self.openingMarketOrderBuyQty = None
+        self.openingMarketOrderSellQty = None
+        self.openingLimitOrderBuyQty = None
+        self.openingLimitOrderSellQty = None
         self.totalBuyCount = 0
         self.totalBuyValue = 0
         self.totalSellCount = 0
