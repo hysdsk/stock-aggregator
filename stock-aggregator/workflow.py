@@ -8,8 +8,7 @@ from .printer import CsvPrinter
 
 class Workflow(object):
     def __init__(self, destination: str, allowed_symbols: list[str] = None) -> None:
-        self.processor = Processor()
-        self.printer = CsvPrinter(destination)
+        self.destination = destination
         self.allowed_symbols = allowed_symbols
 
     def _findFiles(self, dirName: str) -> list[str]:
@@ -29,9 +28,11 @@ class Workflow(object):
             return f.readlines()
 
     def run(self, dirName: str) -> None:
-        files = self._findFiles(dirName)
+        processor = Processor()
+        printer = CsvPrinter(self.destination)
         outputs: list[Output] = []
+        files = self._findFiles(dirName)
         with Pool(processes=cpu_count()) as pool:
-            results = pool.starmap_async(self.processor.run, [(self._readFile(file),) for file in files])
+            results = pool.starmap_async(processor.run, [(self._readFile(file),) for file in files])
             outputs.extend(results.get())
-        self.printer.out(outputs)
+        printer.out(outputs)
