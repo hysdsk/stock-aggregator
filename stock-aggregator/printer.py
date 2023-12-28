@@ -1,3 +1,4 @@
+import os
 import copy
 import pandas as pd
 from abc import ABC, abstractmethod
@@ -161,7 +162,8 @@ class CsvPrinter(Printer):
             self.base[f"{i}:売時売買代金"] = []
             self.base[f"{i}:売時売買代金一分"] = []
             self.base[f"{i}:売時板更新数一分"] = []
-        pd.DataFrame(self.base).to_csv(csvname, index=False)
+        if not os.path.isfile(self.csvname):
+            pd.DataFrame(self.base).to_csv(self.csvname, index=False)
 
     def out(self, outputs: list[Output]):
         for output in outputs:

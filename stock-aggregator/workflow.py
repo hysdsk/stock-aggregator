@@ -8,8 +8,8 @@ from .printer import CsvPrinter
 
 class Workflow(object):
     def __init__(self, destination: str, allowed_symbols: list[str] = None) -> None:
+        self.processor = Processor()
         self.printer = CsvPrinter(destination)
-        self.exclude_symbols = ["101", "151", "154"]
         self.allowed_symbols = allowed_symbols
 
     def _findFiles(self, dirName: str) -> list[str]:
@@ -21,7 +21,7 @@ class Workflow(object):
         if self.allowed_symbols:
             files = [f for f in files if f.replace(".json", "") in self.allowed_symbols]
         else:
-            files = [f for f in files if f.replace(".json", "") not in self.exclude_symbols]
+            files = [f for f in files if f.replace(".json", "") not in ["101", "151", "154"]]
         return [f"{dirName}/{f}" for f in files]
 
     def _readFile(self, filename: str) -> list[str]:
@@ -31,8 +31,7 @@ class Workflow(object):
     def run(self, dirName: str) -> None:
         files = self._findFiles(dirName)
         outputs: list[Output] = []
-        processor: Processor = Processor()
         with Pool(processes=cpu_count()) as pool:
-            results = pool.starmap_async(processor.run, [(self._readFile(file),) for file in files])
+            results = pool.starmap_async(self.processor.run, [(self._readFile(file),) for file in files])
             outputs.extend(results.get())
         self.printer.out(outputs)
