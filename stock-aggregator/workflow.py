@@ -23,9 +23,12 @@ class Workflow(object):
         with open(filename, mode="r", encoding="utf-8") as f:
             return f.readlines()
 
-    def run(self, dirName: str, offset_minute: int) -> list[Output]:
-        outputs: list[Output] = []
+    def run(self, dirName: str, offset_minute: int, symbols: list[str] = None) -> list[Output]:
         files = self._findFiles(dirName)
+        if symbols:
+            allowed_files = [f"{dirName}/{s}.json" for s in symbols]
+            files = [f for f in files if f in allowed_files]
+        outputs: list[Output] = []
         processor: Processor = Processor(offset_minute, self.thresholds)
         with Pool(processes=cpu_count()) as pool:
             results = pool.starmap_async(processor.run, [(self._readFile(file),) for file in files])

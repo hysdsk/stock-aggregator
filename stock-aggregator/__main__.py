@@ -22,6 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--day", type=str, default=None, help="")
     parser.add_argument("--output", type=str, default="console", choices=["console", "csv"], help="")
     parser.add_argument("--offset-minute", type=int, default=5, choices=range(1, 31), help="")
+    parser.add_argument("--symbols", type=str, default=None, nargs="+", help="")
     args = parser.parse_args()
     # 閾値読み込み
     df = pd.read_csv(config["target_filename"], dtype={"code": str}, skipinitialspace=True).rename(columns=lambda x: x.strip())
@@ -35,11 +36,11 @@ if __name__ == "__main__":
             desc=f"Aggregate data for {len(targets.items())} days"
             bar_format="{l_bar}\033[32m{bar}\033[0m{r_bar}"
             for day, dirName in tqdm(targets.items(), desc=desc, bar_format=bar_format):
-                printer.out(Workflow(thresholds).run(dirName, args.offset_minute))
+                printer.out(Workflow().run(dirName, args.offset_minute, args.symbols))
         else:
             printer = ConsolePrinter()
             for day, dirName in targets.items():
-                printer.out(Workflow(thresholds).run(dirName, args.offset_minute))
+                printer.out(Workflow().run(dirName, args.offset_minute, args.symbols))
     except KeyboardInterrupt:
         print("You typed \"CTRL + C\", which is the keyboard interrupt exception.")
     finally:
