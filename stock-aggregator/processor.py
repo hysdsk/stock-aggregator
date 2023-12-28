@@ -5,15 +5,11 @@ from .output import Output, Contract, Order
 
 
 class Processor(object):
-    def __init__(
-            self,
-            offset_minute: int,
-            thresholds=None) -> None:
-        self.preparing_time = time(hour=8, minute=60-offset_minute)
-        self.resting_time = time(hour=12, minute=30-offset_minute)
+    def __init__(self) -> None:
+        self.preparing_time = time(hour=8, minute=50)
+        self.resting_time = time(hour=12, minute=20)
         self.start_time = time(hour=8, minute=0)
         self.close_time = time(hour=14, minute=59, second=55)
-        self.thresholds = thresholds
         self.lastMinuteHistories: list[TradingValueHistory] = []
 
     def _addLastMinuteHistories(self, receivedtime: datetime, tradingvalue: int):
@@ -64,23 +60,9 @@ class Processor(object):
             # ザラ場通常時
             return "opening"
 
-    # def _calc_threshold(self, totalMarketValue: float) -> float:
-    #     if not totalMarketValue:
-    #         return 30000000
-    #     if totalMarketValue >=  90 * (10**9): return round(totalMarketValue * 0.00051)
-    #     if totalMarketValue >=  80 * (10**9): return 40*(10**6)
-    #     if totalMarketValue >=  70 * (10**9): return 36*(10**6)
-    #     if totalMarketValue >=  60 * (10**9): return 32*(10**6)
-    #     if totalMarketValue >=  50 * (10**9): return 29*(10**6)
-    #     if totalMarketValue >=  40 * (10**9): return 28*(10**6)
-    #     if totalMarketValue >=  30 * (10**9): return 26*(10**6)
-    #     if totalMarketValue >=  20 * (10**9): return 24*(10**6)
-    #     if totalMarketValue >=  10 * (10**9): return 22*(10**6)
-    #     return                                       20*(10**6)
-
     def _calc_threshold(self, totalMarketValue: float) -> float:
         if not totalMarketValue:
-            return 30000000
+            return 20000000
         if totalMarketValue >=  65 * (10**9): return round(totalMarketValue * 0.00033)
         if totalMarketValue >=  60 * (10**9): return 20*(10**6)
         if totalMarketValue >=  50 * (10**9): return 19*(10**6)
@@ -176,7 +158,7 @@ class Processor(object):
                 continue
             if output.opening_totalmarketvalue is None:
                 output.opening_totalmarketvalue = crnt.totalMarketValue
-                output.threshold = self.thresholds[crnt.symbol] if self.thresholds else self._calc_threshold(crnt.totalMarketValue)
+                output.threshold = self._calc_threshold(crnt.totalMarketValue)
             messages.append(crnt)
             self.process(messages, output)
         output.last_message = messages[-1]

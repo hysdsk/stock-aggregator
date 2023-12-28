@@ -1,13 +1,16 @@
 import os
 import re
 from multiprocessing import Pool, cpu_count
-from .processor import Processor
 from .output import Output
+from .processor import Processor
+from .printer import CsvPrinter
 
 
 class Workflow(object):
-    def __init__(self, thresholds: dict[str, int] = None) -> None:
-        self.thresholds = thresholds
+    def __init__(self, destination: str, allowed_symbols: list[str] = None) -> None:
+        self.printer = CsvPrinter(destination)
+        self.exclude_symbols = ["101", "151", "154"]
+        self.allowed_symbols = allowed_symbols
 
     def _findFiles(self, dirName: str) -> list[str]:
         pattern_json = re.compile(r"^[0-9]{4}\.json$")
@@ -15,22 +18,21 @@ class Workflow(object):
         if "incomplete" in files:
             return []
         files = [f for f in files if pattern_json.match(f)]
-        files = [f for f in files if f.replace(".json", "") not in ["101", "151", "154"]]
-        files = [f for f in files if self.thresholds is None or f.replace(".json", "") in self.thresholds]
+        if self.allowed_symbols:
+            files = [f for f in files if f.replace(".json", "") in self.allowed_symbols]
+        else:
+            files = [f for f in files if f.replace(".json", "") not in self.exclude_symbols]
         return [f"{dirName}/{f}" for f in files]
 
     def _readFile(self, filename: str) -> list[str]:
         with open(filename, mode="r", encoding="utf-8") as f:
             return f.readlines()
 
-    def run(self, dirName: str, offset_minute: int, symbols: list[str] = None) -> list[Output]:
+    def run(self, dirName: str) -> None:
         files = self._findFiles(dirName)
-        if symbols:
-            allowed_files = [f"{dirName}/{s}.json" for s in symbols]
-            files = [f for f in files if f in allowed_files]
         outputs: list[Output] = []
-        processor: Processor = Processor(offset_minute, self.thresholds)
+        processor: Processor = Processor()
         with Pool(processes=cpu_count()) as pool:
             results = pool.starmap_async(processor.run, [(self._readFile(file),) for file in files])
             outputs.extend(results.get())
-        return outputs
+        self.printer.out(outputs)
